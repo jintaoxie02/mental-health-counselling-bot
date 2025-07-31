@@ -1,0 +1,216 @@
+  body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure perfect centering and symmetry on all devices */
+.chat-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  /* Aesthetic background */
+  background: linear-gradient(135deg, rgba(254, 247, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
+}
+
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  margin: 0 auto;
+  left: 50%;
+  transform: translateX(-50%);
+  position: relative;
+  /* Override any sidebar effects */
+  margin-left: 0 !important;
+  overflow: hidden;
+  /* Aesthetic enhancement */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.messages-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+  padding: 0 16px;
+  /* Aesthetic enhancements */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+}
+
+.input-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  width: 100%;
+  margin: 0 auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Message specific centering and symmetry */
+.message-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 12px;
+  /* Aesthetic spacing */
+  margin-bottom: 16px;
+  margin-top: 8px;
+}
+
+.message-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  /* Aesthetic enhancement */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* Ensure all messages are centered */
+.message-wrapper {
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+.message-content {
+  margin: 0 auto !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  max-width: 100% !important;
+}
+
+.message-text-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* Loading indicator centering and symmetry */
+.loading-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.loading-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Responsive centering for different screen sizes */
+@media (max-width: 600px) {
+  .chat-container {
+    padding: 0 8px;
+  }
+  
+  .chat-content {
+    padding: 0 4px;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 960px) {
+  .chat-container {
+    padding: 0 16px;
+  }
+  
+  .chat-content {
+    padding: 0 8px;
+  }
+}
+
+@media (min-width: 961px) {
+  .chat-container {
+    padding: 0 24px;
+    /* Ensure centering on large screens */
+    justify-content: center;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    /* Override any sidebar effects */
+    margin-left: 0 !important;
+  }
+  
+  .chat-content {
+    padding: 0 12px;
+    /* Ensure centering on large screens */
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 100%;
+    /* Override any sidebar effects */
+    margin-left: 0 !important;
+  }
+  
+  .messages-container {
+    /* Ensure centering on large screens */
+    justify-content: center;
+    align-items: center;
+    max-width: 100%;
+  }
+  
+  .message-wrapper {
+    /* Ensure centering on large screens */
+    justify-content: center !important;
+    align-items: center;
+    width: 100%;
+    margin: 0 auto;
+  }
+  
+  .message-content {
+    /* Ensure centering on large screens */
+    max-width: 70%;
+    margin: 0 auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+  
+  .input-container {
+    /* Ensure centering on large screens */
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 100%;
+    /* Override any sidebar effects */
+    margin-left: 0 !important;
+  }
+}

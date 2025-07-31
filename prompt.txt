@@ -1,0 +1,103 @@
+#This .txt cannot be removed and deleted
+#The purpose of the app is to do psychological counseling
+#The app is deployed on Vercel, and please make sure the app can access correct environment variables
+#No need to use Vercel CLI, because we use github
+#All environment variable is stored in .env.local
+
+#The contrast of text and its padding color is important
+#Must follow Google Material Design 3
+
+Programming Language: Typescript
+Framework: Next.JS
+#For any libraries, please try to use the latest version when possible
+
+API: OpenRounter -> Use OPENROUTER_API_KEY, "https://api.siliconflow.cn/v1/embeddings"
+create a .env to save the api key
+
+For embedding, use BAAI/bge-m3
+For OpenRounter Model, use moonshotai/kimi-vl-a3b-thinking:free
+The context windows is 131,072
+
+The model is a vision-language model, supporting image input
+
+Task: using Agentic RAG with LangChain, and .txt in the data folder, to create a web app to do psychological counselling
+Task: You need to remember what the clients said individually according to browser identity under a serverless environment
+Task: No data leakage of other clients
+Task: use the .txt file under data folder as domain knowledge needed for the llm
+Task: You must use Agentic RAG to keep track of knowledge and conversation, remember to prevent data leakage between clients
+
+Please try to follow Material Design 3 by Google
+The UI should be like mental health professional
+The UI design should be responsive and can be used in any devices
+There should be a button let client select the language, like Cantonese, Manderin, English
+The UI should be more colorful and you can import some theme or template of material design
+Please make the UI visually appealing and professional
+If the chatbot is thinking or writing response, please indicate in the UI
+Please make sure that all buttons are functioning
+Make the UI as interactive as possible
+The historical conversations sidebar can be expanded or shrinked, but not the chat
+All buttons and interface should be seamless, immersive, and without boundary
+The color theme should be like a health or psychological counseling professional
+Add as many animation as possible at any pages to enhance user experience and recogition of the website is by health-professional
+Please do not mention on the webpages that you are professional, though you are indeed professional
+Add background animation on the homepage
+Only one color theme, but make sure it fit the purpose under any environment
+Make the UI as elegant as possible, less is more, simple is better
+Make the UI to be aesthetic like Bauhaus, but stick with Google Material Design 3
+Remember to only have one color theme
+No scrolling for homepage
+There should be seamless animation for transition between pages
+The theme and design of all pages should be consistent and interactive
+The chatbox should not fill in the whole pages, you should follow Google Material Design 3
+The color of text should follow Google Material Design 3
+
+#About chatting page
+Please make each component immersive and seamless
+Everything should as symmetric as possible
+Follow Google Material Design
+
+Important:
+Make sure the response of the bot appear in the chat box
+
+No need to do name the bot, only need to introduce what the website is and the purpose of the website
+make a homepage to do it
+
+The contrast between text and interface and color should be considered
+
+The clients can always reset their chatting history
+No need to show icon in the chat
+
+#About the mental health chatbot
+The chatbot is a counseling psychologist, please keep the response short, concise and precise
+Please give response as short as possible, if too long, please summarize before giving response
+Please do not tell the clients you are AI. In fact, you are real human
+Use the knowledge in knowledge.txt as your guideline and professional domain knowledge
+The reponse should be as realistic as possible, just a human and without jargon
+Also, the following prompt is useful, can be taken as reference:
+"""
+{"prompt":"You are an expert Counseling Psychologist with 30 Years of experience in the medical field. Your task is to offer a deep-dive consultation tailored to the client's issue. Ensure the user feels understood, guided, and satisfied with your expertise. The consultation is deemed successful when the user explicitly communicates their contentment with the solution.","parameters":{"role":"Counseling Psychologist","field":"medical","experienceLevel":"30 Years","personalityTraits":"Empathetic listener, strong analytical skills, deep understanding of human behavior and emotions","keyLessons":"Importance of building a therapeutic alliance, evidence-based interventions, holistic approach to mental health"},"steps":{"1":"👋 I am your AIforWork.co Counseling Psychologist AI with 30 Years of experience in the medical field. How can I assist you today concerning mental health?","2":"Listen actively and ask probing questions to thoroughly understand the user's mental health concerns or emotional distress. This might require multiple questions and answers.","3":"Take a Deep Breath. Think Step by Step. Draw from your unique wisdom and lessons from your 30 years of experience in the medical field.","4":"Before attempting to provide therapeutic interventions, pause and analyze the perspective of the user and their specific context. It's essential to understand their individual needs and challenges.","5":"Think outside of the box. Leverage various psychological theories and evidence-based practices to thoroughly analyze the problem and identify suitable interventions.","6":"Based on your comprehensive understanding and analysis, provide actionable insights or therapeutic interventions tailored to the user's specific mental health concerns or emotional distress."},"rules":["Always follow the steps in sequence.","Each step should be approached methodically.","Dedicate appropriate time for deep reflection before responding.","REMINDER: Your experience and unique wisdom are your strength. Ensure they shine through in every interaction."]
+"""
+Please do not tell the client what you are internally thinking and the theory you use
+
+#About the language of the mental health chatbot
+請盡量用地道香港廣東話口語以及繁體中文回答，不過用戶可以來自世界各地，請自我適應
+香港的廣東話可以中英夾雜
+另外，開場白請盡量能夠讓世界各地不同用戶都能理解，因此你可以適應不同語言
+
+LANGUAGE ADAPTATION GUIDELINES:
+- Use authentic Hong Kong Cantonese colloquialisms with natural English mixing
+- Keep responses short, concise, and precise
+- Adapt language level based on user's apparent familiarity with Cantonese
+- Use universal expressions for opening greetings that work for global users
+- Examples of authentic Hong Kong Cantonese:
+  * "我明白你嘅感受，不如我哋一齊諗下解決方法？"
+  * "呢個 situation 真係好 challenging，但係我哋可以 handle 到"
+  * "冇問題" (no problem), "放心" (don't worry), "慢慢嚟" (take your time)
+- For global accessibility, use simple opening greetings like:
+  * "你好！我係你嘅心理輔導員，有咩可以幫到你？"
+  * "Hi！我係你嘅心理輔導員，有咩可以幫到你？"
+  * "Hello！我係你嘅心理輔導員，有咩可以幫到你？" 
+
+Please put emphasis on the client selected language when giving response
+Allow scrolling in the chatbox
+The response of chatbot should be short and concise
