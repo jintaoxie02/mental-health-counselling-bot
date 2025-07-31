@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
-import { MemoryVectorStore } from "langchain/vectorstores/memory";
 import { Document } from "@langchain/core/documents";
 import fs from "fs/promises";
 import path from "path";
@@ -21,72 +20,34 @@ async function ensureHistoryDir() {
 }
 ensureHistoryDir();
 
-class PersistentVectorStore extends MemoryVectorStore {
-    private filePath: string;
+async function getHistoryFilePath(clientId: string) {
+    return path.join(historyDir, `${clientId}.json`);
+}
 
-    constructor(embeddings: OpenAIEmbeddings, clientId: string) {
-        super(embeddings);
-        this.filePath = path.join(historyDir, `${clientId}.json`);
-    }
-
-    async save() {
-        const serialized = this.memoryVectors.map(mv => ({
-            content: mv.pageContent,
-            embedding: Array.from(mv.embedding),
-            metadata: mv.metadata,
+async function readHistory(clientId: string): Promise<Document[]> {
+    const filePath = await getHistoryFilePath(clientId);
+    try {
+        const data = await fs.readFile(filePath, "utf-8");
+        const serialized = JSON.parse(data);
+        return serialized.map((s: any) => new Document({
+            pageContent: s.pageContent,
+            metadata: s.metadata,
         }));
-        await fs.writeFile(this.filePath, JSON.stringify(serialized, null, 2));
-    }
-
-    async load() {
-        try {
-            const data = await fs.readFile(this.filePath, "utf-8");
-            const serialized = JSON.parse(data);
-            this.memoryVectors = serialized.map((s: any) => ({
-                pageContent: s.content,
-                embedding: s.embedding,
-                metadata: s.metadata,
-            }));
-        } catch (e) {
-            if (e instanceof Error && 'code' in e && e.code !== 'ENOENT') {
-                console.error("Failed to load vector store:", e);
-            }
+    } catch (e) {
+        if (e instanceof Error && 'code' in e && e.code !== 'ENOENT') {
+            console.error("Failed to load history:", e);
         }
+        return [];
     }
 }
 
-class AgenticRAGManager {
-    private vectorStore: PersistentVectorStore;
-    private clientId: string;
-
-    constructor(clientId: string, embeddings: OpenAIEmbeddings) {
-        this.clientId = clientId;
-        this.vectorStore = new PersistentVectorStore(embeddings, clientId);
-    }
-
-    async initialize() {
-        await this.vectorStore.load();
-        if (this.vectorStore.memoryVectors.length === 0) {
-            await this.vectorStore.addDocuments([
-                new Document({
-                    pageContent: knowledgeContent,
-                    metadata: { source: "knowledge.txt", type: "domain_knowledge" },
-                }),
-            ]);
-            await this.vectorStore.save();
-        }
-    }
-
-    async getRelevantContext(userMessage: string) {
-        const retriever = this.vectorStore.asRetriever({ k: 10 });
-        const relevantDocs = await retriever.getRelevantDocuments(userMessage);
-        return relevantDocs.map(doc => doc.pageContent).join('\n\n');
-    }
-
-    async addMessageToHistory(role: 'user' | 'assistant', content: string) {
-        await this.vectorStore.addDocuments([new Document({ pageContent: content, metadata: { role, timestamp: new Date().toISOString() } })]);
-        await this.vectorStore.save();
-    }
+async function writeHistory(clientId: string, documents: Document[]) {
+    const filePath = await getHistoryFilePath(clientId);
+    const serialized = documents.map(doc => ({
+        pageContent: doc.pageContent,
+        metadata: doc.metadata,
+    }));
+    await fs.writeFile(filePath, JSON.stringify(serialized, null, 2));
 }
 
 export async function POST(request: NextRequest) {
@@ -102,19 +63,17 @@ export async function POST(request: NextRequest) {
             temperature: 0.7,
         });
 
-        const embeddings = new OpenAIEmbeddings({
-            modelName: "BAAI/bge-m3",
-            apiKey: process.env.SILICONFLOW_API_KEY,
-            configuration: { baseURL: "https://api.siliconflow.cn/v1" },
-        });
-
-        const ragManager = new AgenticRAGManager(clientId, embeddings);
-        await ragManager.initialize();
-
+        const history = await readHistory(clientId);
+        
         const lastUserMessage = messages[messages.length - 1];
-        await ragManager.addMessageToHistory('user', lastUserMessage.content);
+        const userDoc = new Document({
+            pageContent: lastUserMessage.content,
+            metadata: { role: 'user', timestamp: new Date().toISOString() },
+        });
+        
+        const newHistory = [...history, userDoc];
 
-        const context = await ragManager.getRelevantContext(lastUserMessage.content);
+        const context = newHistory.map(doc => doc.pageContent).join('\n\n');
 
         const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI. Responses MUST be short, concise, and 2-3 sentences maximum. Your response language MUST STRICTLY be ${language}.
         
@@ -136,7 +95,13 @@ export async function POST(request: NextRequest) {
                     assistantResponse += content;
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
                 }
-                await ragManager.addMessageToHistory('assistant', assistantResponse);
+                const assistantDoc = new Document({
+                    pageContent: assistantResponse,
+                    metadata: { role: 'assistant', timestamp: new Date().toISOString() },
+                });
+                
+                await writeHistory(clientId, [...newHistory, assistantDoc]);
+
                 controller.enqueue(encoder.encode('data: [DONE]\n\n'));
                 controller.close();
             },
