@@ -81,9 +81,13 @@ export async function POST(request: NextRequest) {
         const newHistory = [...history, userDoc];
 
         const vectorStore = await MemoryVectorStore.fromDocuments(newHistory, embeddings);
-        const retriever = vectorStore.asRetriever(10);
+        const retriever = vectorStore.asRetriever(5);
         const relevantDocs = await retriever.getRelevantDocuments(lastUserMessage.content);
-        const context = relevantDocs.map(doc => doc.pageContent).join('\n\n');
+        
+        const recentHistory = newHistory.slice(-10);
+        
+        const combinedContext = [...new Set([...relevantDocs, ...recentHistory])];
+        const context = combinedContext.map(doc => doc.pageContent).join('\n\n');
 
         const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI.
         
