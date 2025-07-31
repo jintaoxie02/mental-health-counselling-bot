@@ -57,16 +57,16 @@ export async function POST(request: NextRequest) {
 
         if (!clientId) return NextResponse.json({ error: "Client ID is required" }, { status: 400 });
 
-        const model = new ChatOpenAI({
-            modelName: "google/gemma-3-27b-it:free",
-            apiKey: process.env.OPENROUTER_API_KEY,
+    const model = new ChatOpenAI({
+            modelName: "moonshotai/kimi-vl-a3b-thinking:free",
+      apiKey: process.env.OPENROUTER_API_KEY,
             configuration: { baseURL: "https://openrouter.ai/api/v1" },
             temperature: 0.5,
-        });
+    });
 
-        const embeddings = new OpenAIEmbeddings({
-            modelName: "BAAI/bge-m3",
-            apiKey: process.env.SILICONFLOW_API_KEY,
+    const embeddings = new OpenAIEmbeddings({
+        modelName: "BAAI/bge-m3",
+        apiKey: process.env.SILICONFLOW_API_KEY,
             configuration: { baseURL: "https://api.siliconflow.cn/v1" },
         });
         
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         const combinedContext = [...new Set([...relevantDocs, ...recentHistory])];
         const context = combinedContext.map(doc => doc.pageContent).join('\n\n');
 
-        const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI.
+        const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI. Your final response MUST NOT contain any <think> tags.
         
         CRITICAL: Your response language MUST STRICTLY be ${language}. Do not provide phonetic spellings or translations.
         
@@ -105,33 +105,69 @@ export async function POST(request: NextRequest) {
         const chatHistory = messages.map((msg: any) => msg.role === 'user' ? new HumanMessage(msg.content) : new AIMessage(msg.content));
 
         const stream = await model.stream([new SystemMessage(systemMessageContent), ...chatHistory]);
+  
+      const encoder = new TextEncoder();
+      const readable = new ReadableStream({
+        async start(controller) {
+                let assistantResponse = ""; // For history
+                let streamBuffer = "";      // Accumulates raw chunks
+                let contentBuffer = "";     // Accumulates clean content
 
-        const encoder = new TextEncoder();
-        const readable = new ReadableStream({
-            async start(controller) {
-                let assistantResponse = "";
-                let buffer = "";
-                const sentenceEndings = /[.!?。！？\n]/;
-
-                const flushBuffer = () => {
-                    if (buffer.trim().length > 0) {
-                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: buffer })}\n\n`));
+                const flushContentBuffer = (force = false) => {
+                    const sentenceEndings = /(?<=[.!?。！？\n])/;
+                    
+                    if (force) {
+                        if (contentBuffer.trim().length > 0) {
+                            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: contentBuffer })}\n\n`));
+                        }
+                        contentBuffer = "";
+                        return;
                     }
-                    buffer = "";
+                    
+                    const sentences = contentBuffer.split(sentenceEndings);
+                    
+                    if (sentences.length > 1) {
+                        const completeSentences = sentences.slice(0, -1).join('');
+                        const remaining = sentences.slice(-1)[0];
+                        
+                        if (completeSentences.trim().length > 0) {
+                             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: completeSentences })}\n\n`));
+                        }
+                        contentBuffer = remaining;
+                    }
                 };
-
+                
                 for await (const chunk of stream) {
-                    const content = chunk.content.toString();
-                    assistantResponse += content;
-                    buffer += content;
+                    streamBuffer += chunk.content.toString();
+                    
+                    while (true) {
+                        const thinkStartIndex = streamBuffer.indexOf("<think>");
+                        if (thinkStartIndex === -1) {
+                            contentBuffer += streamBuffer;
+                            assistantResponse += streamBuffer;
+                            streamBuffer = "";
+                            break;
+                        }
+                        
+                        const thinkEndIndex = streamBuffer.indexOf("</think>");
+                        if (thinkEndIndex === -1) {
+                            const preThinkContent = streamBuffer.substring(0, thinkStartIndex);
+                            contentBuffer += preThinkContent;
+                            assistantResponse += preThinkContent;
+                            streamBuffer = streamBuffer.substring(thinkStartIndex);
+                            break;
+                        }
 
-                    const lastChar = buffer.slice(-1);
-                    if (sentenceEndings.test(lastChar)) {
-                        flushBuffer();
+                        const preThinkContent = streamBuffer.substring(0, thinkStartIndex);
+                        contentBuffer += preThinkContent;
+                        assistantResponse += preThinkContent;
+
+                        streamBuffer = streamBuffer.substring(thinkEndIndex + "</think>".length);
                     }
+                    flushContentBuffer();
                 }
                 
-                flushBuffer();
+                flushContentBuffer(true);
 
                 const assistantDoc = new Document({
                     pageContent: assistantResponse,
@@ -139,21 +175,21 @@ export async function POST(request: NextRequest) {
                 });
                 
                 await writeHistory(clientId, [...newHistory, assistantDoc]);
-
-                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-                controller.close();
+  
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
             },
             cancel() {
                 console.log("Stream cancelled by client.");
             }
-        });
-
-        return new NextResponse(readable, {
-            headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
-        });
-
+      });
+  
+      return new NextResponse(readable, {
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+      });
+  
     } catch (error) {
-        console.error('Chat API error:', error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      console.error('Chat API error:', error);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

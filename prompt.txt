@@ -15,8 +15,8 @@ API: OpenRounter -> Use OPENROUTER_API_KEY, "https://api.siliconflow.cn/v1/embed
 create a .env to save the api key
 
 For embedding, use BAAI/bge-m3
-For OpenRounter Model, use google/gemma-3-27b-it:free
-The context windows is 96,000
+For OpenRounter Model, use moonshotai/kimi-vl-a3b-thinking:free
+The context windows is 131,072
 
 The model is a vision-language model, supporting image input
 
