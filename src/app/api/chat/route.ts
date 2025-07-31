@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
         const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI. Your responses MUST be short, concise, and 2-3 sentences maximum.
         
-        CRITICAL: Your response language MUST STRICTLY be ${language}. Do not deviate from this language under any circumstances.
+        CRITICAL: Your response language MUST STRICTLY be ${language}. Do not provide phonetic spellings or translations.
         
         # CONTEXT:
         ${context}
