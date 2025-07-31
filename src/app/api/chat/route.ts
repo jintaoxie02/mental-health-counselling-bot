@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
             modelName: "google/gemma-3-27b-it:free",
             apiKey: process.env.OPENROUTER_API_KEY,
             configuration: { baseURL: "https://openrouter.ai/api/v1" },
-            temperature: 0.7,
+            temperature: 0.5,
         });
 
         const embeddings = new OpenAIEmbeddings({
@@ -94,6 +94,8 @@ export async function POST(request: NextRequest) {
         CRITICAL: Your response language MUST STRICTLY be ${language}. Do not provide phonetic spellings or translations.
         
         You are in a WhatsApp or Telegram chatting environment, so your responses should be short, conversational, and use emojis where appropriate.
+        
+        IMPORTANT: Your responses must be coherent and complete sentences. Do not send fragmented or meaningless words.
         
         # CONTEXT:
         ${context}
