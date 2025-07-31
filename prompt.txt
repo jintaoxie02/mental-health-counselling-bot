@@ -15,8 +15,8 @@ API: OpenRounter -> Use OPENROUTER_API_KEY, "https://api.siliconflow.cn/v1/embed
 create a .env to save the api key
 
 For embedding, use BAAI/bge-m3
-For OpenRounter Model, use moonshotai/kimi-vl-a3b-thinking:free
-The context windows is 131,072
+For OpenRounter Model, use google/gemma-3-27b-it:free
+The context windows is 96,000
 
 The model is a vision-language model, supporting image input
 
@@ -45,7 +45,7 @@ Only one color theme, but make sure it fit the purpose under any environment
 Make the UI as elegant as possible, less is more, simple is better
 Make the UI to be aesthetic like Bauhaus, but stick with Google Material Design 3
 Remember to only have one color theme
-No scrolling for homepage
+Only allow vertical scrolling for homepage
 There should be seamless animation for transition between pages
 The theme and design of all pages should be consistent and interactive
 The chatbox should not fill in the whole pages, you should follow Google Material Design 3

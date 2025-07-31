@@ -30,19 +30,37 @@ export function Chat({ initialLanguage = "Cantonese" }) {
   const [error, setError] = useState<string | null>(null);
   const [language, setLanguage] = useState(initialLanguage);
   const [openResetDialog, setOpenResetDialog] = useState(false);
+  const [clientId, setClientId] = useState<string | null>(null);
   
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    try {
-      const savedMessages = localStorage.getItem('chatHistory');
-      if (savedMessages) setMessages(JSON.parse(savedMessages));
-    } catch (e) { console.error("Failed to load messages", e); }
+    const fetchClientId = async () => {
+      try {
+        const response = await fetch('/api/client');
+        if (!response.ok) throw new Error('Failed to get client ID');
+        const data = await response.json();
+        setClientId(data.clientId);
+      } catch (e) {
+        console.error("Failed to fetch client ID", e);
+        setError("Could not establish a stable connection.");
+      }
+    };
+    fetchClientId();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('chatHistory', JSON.stringify(messages));
-  }, [messages]);
+    if (!clientId) return;
+    try {
+      const savedMessages = localStorage.getItem(`chatHistory_${clientId}`);
+      if (savedMessages) setMessages(JSON.parse(savedMessages));
+    } catch (e) { console.error("Failed to load messages", e); }
+  }, [clientId]);
+
+  useEffect(() => {
+    if (!clientId) return;
+    localStorage.setItem(`chatHistory_${clientId}`, JSON.stringify(messages));
+  }, [messages, clientId]);
 
   useEffect(() => {
     setLanguage(initialLanguage);
@@ -97,7 +115,7 @@ export function Chat({ initialLanguage = "Cantonese" }) {
     abortControllerRef.current = new AbortController();
 
     try {
-        const payload: any = { messages: newMessages, language };
+        const payload: any = { messages: newMessages, language, clientId };
         if (imageBase64) {
             const lastMessageWithImage = { ...userMessage, imageBase64 };
             payload.messages = [...messages, lastMessageWithImage];
@@ -158,11 +176,11 @@ export function Chat({ initialLanguage = "Cantonese" }) {
   };
 
   const handleReset = () => {
-    localStorage.removeItem('chatHistory');
+    if (!clientId) return;
+    localStorage.removeItem(`chatHistory_${clientId}`);
     setMessages([]);
     setError(null);
     setOpenResetDialog(false);
-    window.location.reload();
   };
   
   const handleBack = () => {

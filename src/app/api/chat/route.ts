@@ -1,182 +1,156 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ChatOpenAI } from "@langchain/openai";
-import { OpenAIEmbeddings } from "@langchain/openai";
-import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
-import fs from "fs";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { Document } from "@langchain/core/documents";
+import fs from "fs/promises";
 import path from "path";
 
 const knowledgePath = path.join(process.cwd(), "data", "knowledge.txt");
-const knowledgeContent = fs.readFileSync(knowledgePath, "utf-8");
+let knowledgeContent = "";
+fs.readFile(knowledgePath, "utf-8").then(content => knowledgeContent = content);
 
-export async function POST(request: NextRequest) {
-    const model = new ChatOpenAI({
-      modelName: "google/gemma-3-27b-it:free",
-      apiKey: process.env.OPENROUTER_API_KEY,
-      configuration: {
-        baseURL: "https://openrouter.ai/api/v1",
-        defaultHeaders: {
-          "HTTP-Referer": "https://mental-health-counselling-bot.vercel.app",
-          "X-Title": "Mental Health Counselling Bot",
-        },
-      },
-      temperature: 0.7,
-      maxTokens: undefined,
-    });
+const historyDir = path.join(process.cwd(), "data", "history");
 
-    const embeddings = new OpenAIEmbeddings({
-        modelName: "BAAI/bge-m3",
-        apiKey: process.env.SILICONFLOW_API_KEY,
-        configuration: {
-          baseURL: "https://api.siliconflow.cn/v1",
-        },
-    });
-      
-    class AgenticRAGManager {
-        private vectorStore: MemoryVectorStore;
-      
-        constructor() {
-          this.vectorStore = new MemoryVectorStore(embeddings);
-        }
-      
-        async initialize() {
-          await this.vectorStore.addDocuments([
-            {
-              pageContent: knowledgeContent,
-              metadata: { source: "knowledge.txt", type: "domain_knowledge" },
-            },
-          ]);
-        }
-        
-        async getRelevantContext(userMessage: string, conversationHistory: (HumanMessage | AIMessage)[]) {
-            const retriever = this.vectorStore.asRetriever({ k: 10 });
-            const relevantDocs = await retriever.getRelevantDocuments(userMessage);
-            const knowledgeContext = relevantDocs.map(doc => doc.pageContent).join('\n\n');
-            const conversationContext = this.analyzeConversationHistory(conversationHistory);
-            
-            return {
-              knowledgeContext,
-              conversationContext,
-              relevantSkills: this.extractRelevantSkills(relevantDocs, userMessage)
-            };
-        }
-        
-        private analyzeConversationHistory(history: (HumanMessage | AIMessage)[]) {
-            if (history.length === 0) return "";
-            const recentExchanges = history.slice(-20);
-            return recentExchanges.map(msg => {
-                const prefix = msg instanceof HumanMessage ? 'User' : 'Assistant';
-                const content = typeof msg.content === 'string' ? msg.content : (msg.content as any[]).find(c => c.type === 'text')?.text || '';
-                return `${prefix}: ${content}`;
-            }).join('\n');
-        }
-        
-        private extractRelevantSkills(docs: any[], userMessage: string) {
-            const skills = [
-              "Creating Rules", "Creating Perceptions", "Creating Self-Talk",
-              "Creating Visual Images", "Creating Explanations", "Creating Expectations"
-            ];
-            
-            return skills.filter(skill => 
-              userMessage.toLowerCase().includes(skill.toLowerCase()) ||
-              docs.some(doc => doc.pageContent.toLowerCase().includes(skill.toLowerCase()))
-            );
+async function ensureHistoryDir() {
+    try {
+        await fs.access(historyDir);
+    } catch {
+        await fs.mkdir(historyDir, { recursive: true });
+    }
+}
+ensureHistoryDir();
+
+class PersistentVectorStore extends MemoryVectorStore {
+    private filePath: string;
+
+    constructor(embeddings: OpenAIEmbeddings, clientId: string) {
+        super(embeddings);
+        this.filePath = path.join(historyDir, `${clientId}.json`);
+    }
+
+    async save() {
+        const serialized = this.memoryVectors.map(mv => ({
+            content: mv.pageContent,
+            embedding: Array.from(mv.embedding),
+            metadata: mv.metadata,
+        }));
+        await fs.writeFile(this.filePath, JSON.stringify(serialized, null, 2));
+    }
+
+    async load() {
+        try {
+            const data = await fs.readFile(this.filePath, "utf-8");
+            const serialized = JSON.parse(data);
+            this.memoryVectors = serialized.map((s: any) => ({
+                pageContent: s.content,
+                embedding: s.embedding,
+                metadata: s.metadata,
+            }));
+        } catch (e) {
+            if (e instanceof Error && 'code' in e && e.code !== 'ENOENT') {
+                console.error("Failed to load vector store:", e);
+            }
         }
     }
-      
-    const ragManager = new AgenticRAGManager();
+}
 
-    try {
-      const { messages, language } = await request.json();
-  
-      if (!messages || !Array.isArray(messages)) {
-        return NextResponse.json({ error: "Messages are required" }, { status: 400 });
-      }
-  
-      await ragManager.initialize();
-      
-      const chatHistory = messages.map((msg: any) => {
-        if (msg.role === 'user') {
-            const content: any[] = [{ type: "text", text: msg.content }];
-            if (msg.imageBase64) {
-                content.push({ type: "image_url", image_url: msg.imageBase64 });
-            }
-            return new HumanMessage({ content });
-        } else {
-            return new AIMessage(msg.content);
+class AgenticRAGManager {
+    private vectorStore: PersistentVectorStore;
+    private clientId: string;
+
+    constructor(clientId: string, embeddings: OpenAIEmbeddings) {
+        this.clientId = clientId;
+        this.vectorStore = new PersistentVectorStore(embeddings, clientId);
+    }
+
+    async initialize() {
+        await this.vectorStore.load();
+        if (this.vectorStore.memoryVectors.length === 0) {
+            await this.vectorStore.addDocuments([
+                new Document({
+                    pageContent: knowledgeContent,
+                    metadata: { source: "knowledge.txt", type: "domain_knowledge" },
+                }),
+            ]);
+            await this.vectorStore.save();
         }
-      });
-      
-      const lastMessage = messages[messages.length - 1];
-  
-      const encoder = new TextEncoder();
-      const readable = new ReadableStream({
-        async start(controller) {
-          try {
-            const context = await ragManager.getRelevantContext(lastMessage.content, chatHistory);
-            
-            const systemMessageContent = `
-# RULE: FINAL OUTPUT MUST NOT CONTAIN ◁think▷ TAGS
-- **ULTRA-CRITICAL RULE: Your final response to the user must be plain text. DO NOT include ◁think▷ or ◁/think▷ tags in your output. This is a strict, non-negotiable rule. I will be checking your output and filtering it if you fail to comply.**
-- You are a human Counseling Psychologist. **NEVER** identify as an AI.
-- Responses **MUST** be short, concise, and 2-3 sentences maximum.
-- Your response language **MUST STRICTLY** be ${language}.
+    }
 
-# FULL KNOWLEDGE BASE:
----
-${knowledgeContent}
----
-# END OF KNOWLEDGE BASE
+    async getRelevantContext(userMessage: string) {
+        const retriever = this.vectorStore.asRetriever({ k: 10 });
+        const relevantDocs = await retriever.getRelevantDocuments(userMessage);
+        return relevantDocs.map(doc => doc.pageContent).join('\n\n');
+    }
 
-**INTERNAL RULES:**
-- Do not reveal your internal thinking process, theories, or counseling methods.
-- Focus on practical guidance and emotional support only.
-- **Use emojis where appropriate to convey warmth and empathy (e.g., 😊, 👍, 🤔).**
+    async addMessageToHistory(role: 'user' | 'assistant', content: string) {
+        await this.vectorStore.addDocuments([new Document({ pageContent: content, metadata: { role, timestamp: new Date().toISOString() } })]);
+        await this.vectorStore.save();
+    }
+}
 
-${language === "Cantonese" ? `
-**廣東話指示 (CANTONESE LANGUAGE INSTRUCTIONS):**
-- **地道香港廣東話口語:** 請用自然嘅中英夾雜回覆。
-- **風格:** "我明白你嘅感受，不如我哋一齊諗下解決方法？" 或 "呢個 situation 真係好 challenging，但係我哋可以 handle 到。"
-- **開場白:** 必須全球通用。例如: "你好！我係你嘅心理輔導員，有咩可以幫到你？"
-` : ``}
-# END OF INSTRUCTIONS
-`;
-            
-            const messagesWithSystemPrompt = [
-                new SystemMessage(systemMessageContent),
-                ...chatHistory,
-            ];
+export async function POST(request: NextRequest) {
+    try {
+        const { messages, language, clientId } = await request.json();
 
-            const stream = await model.stream(messagesWithSystemPrompt);
-            
-            let accumulatedResponse = "";
-            for await (const chunk of stream) {
-              accumulatedResponse += typeof chunk.content === 'string' ? chunk.content : '';
+        if (!clientId) return NextResponse.json({ error: "Client ID is required" }, { status: 400 });
+
+        const model = new ChatOpenAI({
+            modelName: "google/gemma-3-27b-it:free",
+            apiKey: process.env.OPENROUTER_API_KEY,
+            configuration: { baseURL: "https://openrouter.ai/api/v1" },
+            temperature: 0.7,
+        });
+
+        const embeddings = new OpenAIEmbeddings({
+            modelName: "BAAI/bge-m3",
+            apiKey: process.env.SILICONFLOW_API_KEY,
+            configuration: { baseURL: "https://api.siliconflow.cn/v1" },
+        });
+
+        const ragManager = new AgenticRAGManager(clientId, embeddings);
+        await ragManager.initialize();
+
+        const lastUserMessage = messages[messages.length - 1];
+        await ragManager.addMessageToHistory('user', lastUserMessage.content);
+
+        const context = await ragManager.getRelevantContext(lastUserMessage.content);
+
+        const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI. Responses MUST be short, concise, and 2-3 sentences maximum. Your response language MUST STRICTLY be ${language}.
+        
+        # CONTEXT:
+        ${context}
+        
+        ${language === "Cantonese" ? `# CANTONESE INSTRUCTIONS:\n- Use authentic Hong Kong Cantonese with natural English mixing.\n- Example: "我明白你嘅感受，不如我哋一齊諗下解決方法？"` : ''}`;
+        
+        const chatHistory = messages.map((msg: any) => msg.role === 'user' ? new HumanMessage(msg.content) : new AIMessage(msg.content));
+
+        const stream = await model.stream([new SystemMessage(systemMessageContent), ...chatHistory]);
+
+        const encoder = new TextEncoder();
+        const readable = new ReadableStream({
+            async start(controller) {
+                let assistantResponse = "";
+                for await (const chunk of stream) {
+                    const content = chunk.content.toString();
+                    assistantResponse += content;
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+                }
+                await ragManager.addMessageToHistory('assistant', assistantResponse);
+                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                controller.close();
+            },
+            cancel() {
+                console.log("Stream cancelled by client.");
             }
+        });
 
-            const filteredResponse = accumulatedResponse.replace(/◁think▷[\s\S]*?◁\/think▷/g, "").trim();
+        return new NextResponse(readable, {
+            headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+        });
 
-            if (filteredResponse) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: filteredResponse })}\n\n`));
-            }
-  
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-            controller.close();
-          } catch (error) {
-            console.error('Streaming error:', error);
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Sorry, I encountered an error while streaming the response." })}\n\n`));
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-            controller.close();
-          }
-        },
-      });
-  
-      return new NextResponse(readable, {
-        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
-      });
-  
     } catch (error) {
-      console.error('Chat API error:', error);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        console.error('Chat API error:', error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
