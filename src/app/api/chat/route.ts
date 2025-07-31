@@ -110,11 +110,29 @@ export async function POST(request: NextRequest) {
         const readable = new ReadableStream({
             async start(controller) {
                 let assistantResponse = "";
+                let buffer = "";
+                const sentenceEndings = /[.!?。！？\n]/;
+
+                const flushBuffer = () => {
+                    if (buffer.trim().length > 0) {
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: buffer })}\n\n`));
+                    }
+                    buffer = "";
+                };
+
                 for await (const chunk of stream) {
                     const content = chunk.content.toString();
                     assistantResponse += content;
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+                    buffer += content;
+
+                    const lastChar = buffer.slice(-1);
+                    if (sentenceEndings.test(lastChar)) {
+                        flushBuffer();
+                    }
                 }
+                
+                flushBuffer();
+
                 const assistantDoc = new Document({
                     pageContent: assistantResponse,
                     metadata: { role: 'assistant', timestamp: new Date().toISOString(), language },
