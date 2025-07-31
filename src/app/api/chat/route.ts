@@ -78,9 +78,11 @@ export async function POST(request: NextRequest) {
             return `[${lang}] ${doc.metadata.role}: ${doc.pageContent}`;
         }).join('\n\n');
 
-        const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI. Your responses MUST be short, concise, and 2-3 sentences maximum.
+        const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI.
         
         CRITICAL: Your response language MUST STRICTLY be ${language}. Do not provide phonetic spellings or translations.
+        
+        You can use emojis to make the conversation more engaging. Your responses can be longer and more detailed.
         
         # CONTEXT:
         ${context}
