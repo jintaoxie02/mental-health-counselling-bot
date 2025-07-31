@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
 import { Document } from "@langchain/core/documents";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
 import fs from "fs/promises";
 import path from "path";
 
@@ -63,6 +64,12 @@ export async function POST(request: NextRequest) {
             temperature: 0.7,
         });
 
+        const embeddings = new OpenAIEmbeddings({
+            modelName: "BAAI/bge-m3",
+            apiKey: process.env.SILICONFLOW_API_KEY,
+            configuration: { baseURL: "https://api.siliconflow.cn/v1" },
+        });
+        
         const history = await readHistory(clientId);
         
         const lastUserMessage = messages[messages.length - 1];
@@ -73,10 +80,10 @@ export async function POST(request: NextRequest) {
         
         const newHistory = [...history, userDoc];
 
-        const context = newHistory.map(doc => {
-            const lang = doc.metadata.language || 'English';
-            return `[${lang}] ${doc.metadata.role}: ${doc.pageContent}`;
-        }).join('\n\n');
+        const vectorStore = await MemoryVectorStore.fromDocuments(newHistory, embeddings);
+        const retriever = vectorStore.asRetriever(10);
+        const relevantDocs = await retriever.getRelevantDocuments(lastUserMessage.content);
+        const context = relevantDocs.map(doc => doc.pageContent).join('\n\n');
 
         const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI.
         
