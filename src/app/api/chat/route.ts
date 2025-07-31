@@ -1,121 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ChatOpenAI } from "@langchain/openai";
-import { OpenAIEmbeddings } from "@langchain/openai";
-import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
+import prisma from "@/lib/db";
 import fs from "fs";
 import path from "path";
 
 const knowledgePath = path.join(process.cwd(), "data", "knowledge.txt");
 const knowledgeContent = fs.readFileSync(knowledgePath, "utf-8");
 
+// We are not using Vercel AI SDK anymore, but this is a good practice
+export const runtime = 'edge';
+
+const model = new ChatOpenAI({
+  modelName: "google/gemma-3-27b-it:free",
+  apiKey: process.env.OPENROUTER_API_KEY,
+  configuration: {
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL, 
+      "X-Title": "Mental Health Counselling Bot",
+    },
+  },
+  temperature: 0.7,
+  maxTokens: undefined, 
+});
+
+const embeddings = new OpenAIEmbeddings({
+    modelName: "BAAI/bge-m3",
+    apiKey: process.env.SILICONFLOW_API_KEY,
+    configuration: {
+      baseURL: "https://api.siliconflow.cn/v1",
+    },
+});
+
+async function getConversationHistory(clientId: string): Promise<(HumanMessage | AIMessage)[]> {
+    const messages = await prisma.message.findMany({
+        where: { clientId },
+        orderBy: { createdAt: 'asc' },
+    });
+    return messages.map(msg => msg.isUser ? new HumanMessage(msg.content) : new AIMessage(msg.content));
+}
+
 export async function POST(request: NextRequest) {
-    const model = new ChatOpenAI({
-      modelName: "google/gemma-3-27b-it:free",
-      apiKey: process.env.OPENROUTER_API_KEY,
-      configuration: {
-        baseURL: "https://openrouter.ai/api/v1",
-        defaultHeaders: {
-          "HTTP-Referer": "https://mental-health-counselling-bot.vercel.app",
-          "X-Title": "Mental Health Counselling Bot",
-        },
-      },
-      temperature: 0.7,
-      maxTokens: undefined,
-    });
-
-    const embeddings = new OpenAIEmbeddings({
-        modelName: "BAAI/bge-m3",
-        apiKey: process.env.SILICONFLOW_API_KEY,
-        configuration: {
-          baseURL: "https://api.siliconflow.cn/v1",
-        },
-    });
-      
-    class AgenticRAGManager {
-        private vectorStore: MemoryVectorStore;
-      
-        constructor() {
-          this.vectorStore = new MemoryVectorStore(embeddings);
-        }
-      
-        async initialize() {
-          await this.vectorStore.addDocuments([
-            {
-              pageContent: knowledgeContent,
-              metadata: { source: "knowledge.txt", type: "domain_knowledge" },
-            },
-          ]);
-        }
-        
-        async getRelevantContext(userMessage: string, conversationHistory: (HumanMessage | AIMessage)[]) {
-            const retriever = this.vectorStore.asRetriever({ k: 10 });
-            const relevantDocs = await retriever.getRelevantDocuments(userMessage);
-            const knowledgeContext = relevantDocs.map(doc => doc.pageContent).join('\n\n');
-            const conversationContext = this.analyzeConversationHistory(conversationHistory);
-            
-            return {
-              knowledgeContext,
-              conversationContext,
-              relevantSkills: this.extractRelevantSkills(relevantDocs, userMessage)
-            };
-        }
-        
-        private analyzeConversationHistory(history: (HumanMessage | AIMessage)[]) {
-            if (history.length === 0) return "";
-            const recentExchanges = history.slice(-20);
-            return recentExchanges.map(msg => {
-                const prefix = msg instanceof HumanMessage ? 'User' : 'Assistant';
-                const content = typeof msg.content === 'string' ? msg.content : (msg.content as any[]).find(c => c.type === 'text')?.text || '';
-                return `${prefix}: ${content}`;
-            }).join('\n');
-        }
-        
-        private extractRelevantSkills(docs: any[], userMessage: string) {
-            const skills = [
-              "Creating Rules", "Creating Perceptions", "Creating Self-Talk",
-              "Creating Visual Images", "Creating Explanations", "Creating Expectations"
-            ];
-            
-            return skills.filter(skill => 
-              userMessage.toLowerCase().includes(skill.toLowerCase()) ||
-              docs.some(doc => doc.pageContent.toLowerCase().includes(skill.toLowerCase()))
-            );
-        }
-    }
-      
-    const ragManager = new AgenticRAGManager();
-
     try {
-      const { messages, language } = await request.json();
-  
-      if (!messages || !Array.isArray(messages)) {
-        return NextResponse.json({ error: "Messages are required" }, { status: 400 });
-      }
-  
-      await ragManager.initialize();
-      
-      const chatHistory = messages.map((msg: any) => {
-        if (msg.role === 'user') {
-            const content: any[] = [{ type: "text", text: msg.content }];
-            if (msg.imageBase64) {
-                content.push({ type: "image_url", image_url: msg.imageBase64 });
-            }
-            return new HumanMessage({ content });
-        } else {
-            return new AIMessage(msg.content);
+        let { messages, language, clientId } = await request.json();
+
+        if (!messages || !Array.isArray(messages)) {
+            return NextResponse.json({ error: "Messages are required" }, { status: 400 });
         }
-      });
-      
-      const lastMessage = messages[messages.length - 1];
-  
-      const encoder = new TextEncoder();
-      const readable = new ReadableStream({
-        async start(controller) {
-          try {
-            const context = await ragManager.getRelevantContext(lastMessage.content, chatHistory);
-            
-            const systemMessageContent = `
+        
+        if (!clientId) {
+            const newClient = await prisma.client.create({ data: {} });
+            clientId = newClient.id;
+        } else {
+            const clientExists = await prisma.client.findUnique({ where: { id: clientId } });
+            if (!clientExists) {
+                await prisma.client.create({ data: { id: clientId } });
+            }
+        }
+
+        const conversationHistory = await getConversationHistory(clientId);
+        const lastUserMessage = messages[messages.length - 1];
+
+        // This is a simplified RAG, we'll improve it later.
+        // For now, we are just using the knowledge base as a big system prompt.
+
+        const encoder = new TextEncoder();
+        const readable = new ReadableStream({
+            async start(controller) {
+                try {
+                    const systemMessageContent = `
 # RULE: FINAL OUTPUT MUST NOT CONTAIN ◁think▷ TAGS
 - **ULTRA-CRITICAL RULE: Your final response to the user must be plain text. DO NOT include ◁think▷ or ◁/think▷ tags in your output. This is a strict, non-negotiable rule. I will be checking your output and filtering it if you fail to comply.**
 - You are a human Counseling Psychologist. **NEVER** identify as an AI.
@@ -141,42 +95,61 @@ ${language === "Cantonese" ? `
 ` : ``}
 # END OF INSTRUCTIONS
 `;
-            
-            const messagesWithSystemPrompt = [
-                new SystemMessage(systemMessageContent),
-                ...chatHistory,
-            ];
 
-            const stream = await model.stream(messagesWithSystemPrompt);
-            
-            let accumulatedResponse = "";
-            for await (const chunk of stream) {
-              accumulatedResponse += typeof chunk.content === 'string' ? chunk.content : '';
-            }
+                    const messagesWithSystemPrompt: (SystemMessage | HumanMessage | AIMessage)[] = [
+                        new SystemMessage(systemMessageContent),
+                        ...conversationHistory,
+                        new HumanMessage(lastUserMessage.content),
+                    ];
 
-            const filteredResponse = accumulatedResponse.replace(/◁think▷[\s\S]*?◁\/think▷/g, "").trim();
+                    const stream = await model.stream(messagesWithSystemPrompt);
 
-            if (filteredResponse) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: filteredResponse })}\n\n`));
-            }
-  
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-            controller.close();
-          } catch (error) {
-            console.error('Streaming error:', error);
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Sorry, I encountered an error while streaming the response." })}\n\n`));
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-            controller.close();
-          }
-        },
-      });
-  
-      return new NextResponse(readable, {
-        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
-      });
-  
+                    let accumulatedResponse = "";
+                    for await (const chunk of stream) {
+                        const content = typeof chunk.content === 'string' ? chunk.content : '';
+                        accumulatedResponse += content;
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: content })}\n\n`));
+                    }
+                    
+                    const filteredResponse = accumulatedResponse.replace(/◁think▷[\s\S]*?◁\/think▷/g, "").trim();
+
+                    if (lastUserMessage.content) {
+                        await prisma.message.create({
+                            data: {
+                                content: lastUserMessage.content,
+                                isUser: true,
+                                clientId: clientId,
+                            }
+                        });
+                    }
+                    if (filteredResponse) {
+                        await prisma.message.create({
+                            data: {
+                                content: filteredResponse,
+                                isUser: false,
+                                clientId: clientId,
+                            }
+                        });
+                    }
+
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ clientId })}\n\n`));
+                    controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                    controller.close();
+                } catch (error) {
+                    console.error('Streaming error:', error);
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Sorry, I encountered an error while streaming the response." })}\n\n`));
+                    controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                    controller.close();
+                }
+            },
+        });
+
+        return new NextResponse(readable, {
+            headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+        });
+
     } catch (error) {
-      console.error('Chat API error:', error);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        console.error('Chat API error:', error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

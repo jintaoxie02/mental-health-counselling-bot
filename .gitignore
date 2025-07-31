@@ -107,3 +107,5 @@ flask-backend/instance
 flask-backend/.venv
 flask-backend/venv
 flask-backend/__pycache__
+
+/src/generated/prisma

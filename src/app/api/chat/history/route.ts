@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getClientStats, getConversationContext } from '@/lib/db';
+import { getClientStats, getConversationContext, resetClientHistory } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,11 +11,12 @@ export async function GET(request: NextRequest) {
     }
 
     const stats = await getClientStats(clientId);
-    const context = await getConversationContext(clientId, 6);
+    // Fetch last 50 messages for context display
+    const context = await getConversationContext(clientId, 50);
 
     return NextResponse.json({ stats, context });
   } catch (error) {
-    console.error('Error in history API:', error);
+    console.error('Error in history GET API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -29,19 +30,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
     }
 
-    // Use the client API for deletion
-    const response = await fetch(`${request.nextUrl.origin}/api/client?clientId=${clientId}`, {
-      method: 'DELETE'
-    });
+    await resetClientHistory(clientId);
 
-    if (response.ok) {
-      const data = await response.json();
-      return NextResponse.json(data);
-    } else {
-      return NextResponse.json({ error: 'Failed to delete history' }, { status: 500 });
-    }
+    return NextResponse.json({ message: 'History reset successfully' });
+    
   } catch (error) {
     console.error('Error deleting history:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete history' }, { status: 500 });
   }
 }
