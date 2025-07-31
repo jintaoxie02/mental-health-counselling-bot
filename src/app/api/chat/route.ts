@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         
         CRITICAL: Your response language MUST STRICTLY be ${language}. Do not provide phonetic spellings or translations.
         
-        You can use emojis to make the conversation more engaging. Your responses can be longer and more detailed.
+        You are in a WhatsApp or Telegram chatting environment, so your responses should be short, conversational, and use emojis where appropriate.
         
         # CONTEXT:
         ${context}
