@@ -68,14 +68,19 @@ export async function POST(request: NextRequest) {
         const lastUserMessage = messages[messages.length - 1];
         const userDoc = new Document({
             pageContent: lastUserMessage.content,
-            metadata: { role: 'user', timestamp: new Date().toISOString() },
+            metadata: { role: 'user', timestamp: new Date().toISOString(), language },
         });
         
         const newHistory = [...history, userDoc];
 
-        const context = newHistory.map(doc => doc.pageContent).join('\n\n');
+        const context = newHistory.map(doc => {
+            const lang = doc.metadata.language || 'English';
+            return `[${lang}] ${doc.metadata.role}: ${doc.pageContent}`;
+        }).join('\n\n');
 
-        const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI. Responses MUST be short, concise, and 2-3 sentences maximum. Your response language MUST STRICTLY be ${language}.
+        const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI. Your responses MUST be short, concise, and 2-3 sentences maximum.
+        
+        CRITICAL: Your response language MUST STRICTLY be ${language}. Do not deviate from this language under any circumstances.
         
         # CONTEXT:
         ${context}
@@ -97,7 +102,7 @@ export async function POST(request: NextRequest) {
                 }
                 const assistantDoc = new Document({
                     pageContent: assistantResponse,
-                    metadata: { role: 'assistant', timestamp: new Date().toISOString() },
+                    metadata: { role: 'assistant', timestamp: new Date().toISOString(), language },
                 });
                 
                 await writeHistory(clientId, [...newHistory, assistantDoc]);

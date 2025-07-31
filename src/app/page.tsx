@@ -76,16 +76,12 @@ export default function Home() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
+          justifyContent: "flex-start",
+          minHeight: "100vh",
           bgcolor: "background.default",
           textAlign: "center",
-          overflow: "hidden",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          overflowX: "hidden",
+          py: 4,
         }}
       >
         {/* Enhanced Background Animation */}
