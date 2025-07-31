@@ -139,31 +139,19 @@ export async function POST(request: NextRequest) {
                 
                 for await (const chunk of stream) {
                     streamBuffer += chunk.content.toString();
-                    
-                    while (true) {
-                        const thinkStartIndex = streamBuffer.indexOf("<think>");
-                        if (thinkStartIndex === -1) {
-                            contentBuffer += streamBuffer;
-                            assistantResponse += streamBuffer;
-                            streamBuffer = "";
-                            break;
-                        }
-                        
-                        const thinkEndIndex = streamBuffer.indexOf("</think>");
-                        if (thinkEndIndex === -1) {
-                            const preThinkContent = streamBuffer.substring(0, thinkStartIndex);
-                            contentBuffer += preThinkContent;
-                            assistantResponse += preThinkContent;
-                            streamBuffer = streamBuffer.substring(thinkStartIndex);
-                            break;
-                        }
-
-                        const preThinkContent = streamBuffer.substring(0, thinkStartIndex);
-                        contentBuffer += preThinkContent;
-                        assistantResponse += preThinkContent;
-
-                        streamBuffer = streamBuffer.substring(thinkEndIndex + "</think>".length);
-                    }
+                    // Remove all think tags (standard and fullwidth)
+                    // Handles <think>...</think>, ◁think▷...◁/think▷, and similar
+                    let filtered = streamBuffer;
+                    // Regex for <think>...</think> and <THINK>...</THINK>
+                    filtered = filtered.replace(/<\/?think>/gi, match => match.toLowerCase());
+                    filtered = filtered.replace(/<think>[\s\S]*?<\/think>/gi, "");
+                    // Regex for ◁think▷...◁/think▷ (fullwidth brackets)
+                    filtered = filtered.replace(/◁think▷[\s\S]*?◁\/think▷/gi, "");
+                    // Regex for any other bracketed think tags (e.g. Unicode variants)
+                    filtered = filtered.replace(/[\u3008\u27e8\u2329]think[\u3009\u27e9\u232a][\s\S]*?[\u3008\u27e8\u2329]\/think[\u3009\u27e9\u232a]/gi, "");
+                    contentBuffer += filtered;
+                    assistantResponse += filtered;
+                    streamBuffer = "";
                     flushContentBuffer();
                 }
                 
