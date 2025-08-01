@@ -11,9 +11,11 @@ import {
   Box,
   FormControl,
   SelectChangeEvent,
+  Chip,
 } from "@mui/material";
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 
 interface AppBarComponentProps {
   language: string;
@@ -78,6 +80,35 @@ export function AppBarComponent({
               <MenuItem value="English">🇺🇸 English</MenuItem>
             </Select>
           </FormControl>
+
+          {/* Material Design 3 Donate Button */}
+          <Tooltip title="Support Our Mission">
+            <Chip
+              icon={<FavoriteIcon />}
+              label="Support"
+              onClick={() => window.open('https://ko-fi.com/helloworld1024', '_blank')}
+              sx={{
+                backgroundColor: 'rgba(255, 87, 34, 0.1)',
+                color: '#FF5722',
+                border: '1px solid rgba(255, 87, 34, 0.3)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 87, 34, 0.2)',
+                  borderColor: '#FF5722',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 8px rgba(255, 87, 34, 0.3)',
+                },
+                '&:active': {
+                  transform: 'translateY(0px)',
+                },
+                transition: 'all 0.2s ease',
+                cursor: 'pointer',
+                fontWeight: 500,
+                '& .MuiChip-icon': {
+                  color: '#FF5722',
+                },
+              }}
+            />
+          </Tooltip>
 
           <Tooltip title="Reset Conversation">
             <IconButton onClick={onReset} sx={{ color: 'error.main' }}>
