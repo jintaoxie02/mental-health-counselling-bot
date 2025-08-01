@@ -38,31 +38,81 @@ export function Chat({ initialLanguage = "Cantonese" }: { initialLanguage?: stri
     };
   }, []);
 
-  // Add initial greeting message based on language
+  // Generate dynamic initial greeting message
   useEffect(() => {
     if (messages.length === 0) {
-      let greeting = "";
-      switch (language) {
-        case "Cantonese":
-          greeting = "你好呀！😊 我係你嘅心理輔導員，有咩想傾下？隨時都可以同我講 🤗";
-          break;
-        case "Mandarin":
-          greeting = "你好！😊 我是你的心理辅导员，有什么想聊的吗？我会认真听的 💙";
-          break;
-        case "English":
-          greeting = "Hey there! 😊 I'm your counselor - what's on your mind today? I'm here to listen 💙";
-          break;
-        default:
-          greeting = "Hey there! 😊 I'm your counselor - what's on your mind today? I'm here to listen 💙";
-      }
-      
-      setMessages([{
-        id: "initial",
-        role: "assistant",
-        content: greeting
-      }]);
+      generateInitialGreeting();
     }
   }, [language, messages.length]);
+
+  const generateInitialGreeting = async () => {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          messages: [], 
+          language,
+          isInitialGreeting: true 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No reader available');
+      }
+
+      const decoder = new TextDecoder();
+      let accumulatedContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              break;
+            }
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                accumulatedContent += parsed.content;
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+        }
+      }
+
+      if (accumulatedContent.trim()) {
+        setMessages([{
+          id: "initial-" + Date.now(),
+          role: "assistant",
+          content: accumulatedContent.trim()
+        }]);
+      }
+    } catch (error) {
+      console.error('Error generating initial greeting:', error);
+      // Fallback to a simple greeting if API fails
+      const fallbackGreeting = language === "Cantonese" ? "你好！😊" : 
+                              language === "Mandarin" ? "你好！😊" : "Hello! 😊";
+      setMessages([{
+        id: "initial-fallback",
+        role: "assistant",
+        content: fallbackGreeting
+      }]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -178,27 +228,8 @@ export function Chat({ initialLanguage = "Cantonese" }: { initialLanguage?: stri
       setError(null);
       setOpenResetDialog(false);
       
-      // Add new greeting message
-      let greeting = "";
-      switch (language) {
-        case "Cantonese":
-          greeting = "你好呀！😊 我係你嘅心理輔導員，有咩想傾下？隨時都可以同我講 🤗";
-          break;
-        case "Mandarin":
-          greeting = "你好！😊 我是你的心理辅导员，有什么想聊的吗？我会认真听的 💙";
-          break;
-        case "English":
-          greeting = "Hey there! 😊 I'm your counselor - what's on your mind today? I'm here to listen 💙";
-          break;
-        default:
-          greeting = "Hey there! 😊 I'm your counselor - what's on your mind today? I'm here to listen 💙";
-      }
-      
-      setMessages([{
-        id: "initial-" + Date.now(),
-        role: "assistant",
-        content: greeting
-      }]);
+      // Generate new dynamic greeting
+      generateInitialGreeting();
       
     } catch (error) {
       setError('Failed to reset chat history');

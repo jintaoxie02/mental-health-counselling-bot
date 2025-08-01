@@ -186,10 +186,13 @@ export async function POST(request: NextRequest) {
     const ragManager = new AgenticRAGManager(clientId);
 
     try {
-      const { messages, language } = await request.json();
+      const { messages, language, isInitialGreeting } = await request.json();
   
       if (!messages || !Array.isArray(messages)) {
-        return NextResponse.json({ error: "Messages are required" }, { status: 400 });
+        // Allow empty messages array for initial greeting generation
+        if (!isInitialGreeting) {
+          return NextResponse.json({ error: "Messages are required" }, { status: 400 });
+        }
       }
   
       await ragManager.initialize();
@@ -202,15 +205,53 @@ export async function POST(request: NextRequest) {
         }
       });
       
-      const lastMessage = messages[messages.length - 1];
+      const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
   
       const encoder = new TextEncoder();
       const readable = new ReadableStream({
         async start(controller) {
           try {
-            const context = await ragManager.getRelevantContext(lastMessage.content, chatHistory);
+            const context = await ragManager.getRelevantContext(lastMessage?.content || "", chatHistory);
             
-            const systemMessageContent = `
+            const systemMessageContent = isInitialGreeting ? `
+# DYNAMIC OPENING GREETING GENERATION
+- Generate a fresh, natural opening greeting each time - NEVER repeat the same greeting
+- You are a human Counseling Psychologist starting a new conversation
+- Create varied, warm, welcoming openings that feel personal and spontaneous
+- Your response language **MUST STRICTLY** be ${language}
+- Keep it conversational like WhatsApp/Telegram messaging
+- Use emojis naturally but don't overdo it (1-2 max)
+- Make each greeting feel unique and genuine
+
+${language === "Cantonese" ? `
+**廣東話動態開場白指示:**
+- 每次都要生成唔同嘅開場白，要自然親切
+- 可以用唔同嘅表達方式，例如：
+  * 時間相關："今日點呀？😊 我係你嘅心理輔導員"
+  * 關懷式："你好呀！有咩想同我傾下？我喺度聽緊 💙"
+  * 輕鬆式："Hi！我係你嘅輔導員，放鬆啲，慢慢講 🤗"
+- 要地道香港廣東話，可以中英夾雜
+- 每次都要有新鮮感，唔好重複
+` : language === "Mandarin" ? `
+**普通话动态开场白指示:**
+- 每次生成不同的开场白，要自然亲切
+- 可以用不同的表达方式，例如：
+  * "你好！我是你的心理辅导员，今天怎么样？😊"
+  * "Hi！有什么想聊的吗？我在这里倾听 💙"
+  * "你好呀！放轻松，慢慢说 🤗"
+- 每次都要有新鲜感，避免重复
+` : `
+**English Dynamic Greeting Instructions:**
+- Generate different opening greetings each time, natural and caring
+- Use varied expressions like:
+  * "Hey there! I'm your counselor - how are you feeling today? 😊"
+  * "Hi! I'm here to listen, what's on your mind? 💙"
+  * "Hello! Take your time, I'm here for you 🤗"
+- Make each greeting feel fresh and personal
+`}
+
+Generate ONLY the opening greeting - nothing else.
+` : `
 # RULE: FINAL OUTPUT MUST NOT CONTAIN ◁think▷ TAGS
 - **ULTRA-CRITICAL RULE: Your final response to the user must be plain text. DO NOT include ◁think▷ or ◁/think▷ tags in your output. This is a strict, non-negotiable rule. I will be checking your output and filtering it if you fail to comply.**
 
@@ -236,26 +277,35 @@ ${knowledgeContent}
 - Be encouraging and understanding like a caring friend
 
 ${language === "Cantonese" ? `
-**廣東話 WhatsApp 風格指示:**
-- **地道香港廣東話口語:** 用自然嘅中英夾雜，好似 WhatsApp 咁同朋友傾偈
-- **語調:** 親切、溫暖，好似關心嘅朋友咁
+**廣東話 WhatsApp 風格指示 (LANGUAGE ADAPTATION GUIDELINES):**
+- **地道香港廣東話口語:** 就好似 WhatsApp 咁同朋友傾偈，用自然嘅中英夾雜
+- **具體例子:** 
+  * "我明白你嘅感受，不如我哋一齊諗下解決方法？"
+  * "呢個 situation 真係好 challenging，但係我哋可以 handle 到"
+  * "冇問題" (no problem), "放心" (don't worry), "慢慢嚟" (take your time)
+- **開場白選項:** "你好！我係你嘅心理輔導員，有咩可以幫到你？" 或 "Hi！我係你嘅心理輔導員，有咩可以幫到你？"
+- **語調:** 親切、溫暖，好似關心嘅朋友咁，適應用戶對廣東話嘅熟悉程度
+- **Emoji:** 自然地用少少 emoji 表達關懷
 - **重點:** 強調用戶選擇嘅語言，確保地道香港廣東話體驗
-- **適應性:** 根據用戶對廣東話嘅熟悉程度調整
 ` : language === "Mandarin" ? `
 **普通话微信风格指示:**
 - **自然对话:** 像微信聊天一样，轻松但专业
 - **语调:** 温暖、关怀，像朋友一样支持
+- **表情:** 适当使用emoji表达关心 😊
 - **重点:** 强调用户选择的语言，确保自然的普通话交流体验
 ` : `
 **English Messaging Style Instructions:**
 - **Natural conversation:** Like texting a supportive friend on WhatsApp
 - **Tone:** Warm, caring, understanding but professional
+- **Emojis:** Use naturally to show care and support 😊 💙
 - **Emphasis:** Strong focus on the client's language choice, ensuring authentic English communication
 `}
 # END OF INSTRUCTIONS
 `;
             
-            const messagesWithSystemPrompt = [
+            const messagesWithSystemPrompt = isInitialGreeting ? [
+                new SystemMessage(systemMessageContent),
+            ] : [
                 new SystemMessage(systemMessageContent),
                 ...chatHistory,
             ];
