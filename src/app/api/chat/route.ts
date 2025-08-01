@@ -56,11 +56,22 @@ export async function POST(request: NextRequest) {
         },
       },
       temperature: 0.7,
-      maxTokens: 131072,
+      maxTokens: 4096,
       modelKwargs: {
         "reasoning_enabled": true
       }
     });
+
+    // Check for required environment variables
+    if (!process.env.OPENROUTER_API_KEY) {
+      console.error('Missing OPENROUTER_API_KEY environment variable');
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    }
+
+    if (!process.env.SILICONFLOW_API_KEY) {
+      console.error('Missing SILICONFLOW_API_KEY environment variable');
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    }
 
     const embeddings = new OpenAIEmbeddings({
         modelName: "BAAI/bge-m3",
@@ -100,11 +111,15 @@ export async function POST(request: NextRequest) {
             },
           ]);
           
-          // Add client's conversation history to vector store for context
+          // Add client's conversation history to vector store for context (reduced for efficiency)
           if (session.conversations.length > 0) {
             const conversationText = session.conversations
-              .slice(-20) // Last 20 messages
-              .map((conv) => `${conv.message instanceof HumanMessage ? 'User' : 'Assistant'}: ${conv.message.content}`)
+              .slice(-10) // Last 10 messages to save context
+              .map((conv) => {
+                const content = conv.message.content.toString();
+                const truncatedContent = content.length > 150 ? content.substring(0, 150) + "..." : content;
+                return `${conv.message instanceof HumanMessage ? 'User' : 'Assistant'}: ${truncatedContent}`;
+              })
               .join('\n');
             
             await this.vectorStore.addDocuments([
@@ -141,8 +156,13 @@ export async function POST(request: NextRequest) {
               .map(doc => doc.pageContent).join('\n\n');
             const conversationContext = this.analyzeConversationHistory(conversationHistory);
             
+            // Limit context to prevent overflow
+            const limitedKnowledgeContext = knowledgeContext.length > 6000 
+              ? knowledgeContext.substring(0, 6000) + "\n\n[Knowledge truncated]"
+              : knowledgeContext;
+            
             return {
-              knowledgeContext,
+              knowledgeContext: limitedKnowledgeContext,
               conversationContext,
               relevantSkills: this.extractRelevantSkills(relevantDocs, userMessage)
             };
@@ -150,11 +170,14 @@ export async function POST(request: NextRequest) {
         
         private analyzeConversationHistory(history: (HumanMessage | AIMessage)[]) {
             if (history.length === 0) return "";
-            const recentExchanges = history.slice(-20);
+            // Reduce to last 10 exchanges to save context
+            const recentExchanges = history.slice(-10);
             return recentExchanges.map(msg => {
                 const prefix = msg instanceof HumanMessage ? 'User' : 'Assistant';
                 const content = typeof msg.content === 'string' ? msg.content : (msg.content as any[]).find(c => c.type === 'text')?.text || '';
-                return `${prefix}: ${content}`;
+                // Limit individual message length
+                const truncatedContent = content.length > 200 ? content.substring(0, 200) + "..." : content;
+                return `${prefix}: ${truncatedContent}`;
             }).join('\n');
         }
         
@@ -213,6 +236,11 @@ export async function POST(request: NextRequest) {
           try {
             const context = await ragManager.getRelevantContext(lastMessage?.content || "", chatHistory);
             
+            // Truncate knowledge content to prevent context overflow
+            const truncatedKnowledgeContent = knowledgeContent.length > 8000 
+              ? knowledgeContent.substring(0, 8000) + "\n\n[Content truncated for context efficiency]"
+              : knowledgeContent;
+            
             const systemMessageContent = isInitialGreeting ? `
 # DYNAMIC OPENING GREETING GENERATION
 - Generate a fresh, natural opening greeting each time - NEVER repeat the same greeting
@@ -263,9 +291,9 @@ Generate ONLY the opening greeting - nothing else.
 - Use emojis naturally like in messaging apps (😊, 💙, 🤗, 🌟, etc.)
 - Write like you're texting a friend who needs support - warm, empathetic, but professional
 
-# FULL KNOWLEDGE BASE:
+# CORE KNOWLEDGE BASE:
 ---
-${knowledgeContent}
+${truncatedKnowledgeContent}
 ---
 # END OF KNOWLEDGE BASE
 
