@@ -31,16 +31,21 @@ export function AppBarComponent({
 
   return (
     <AppBar
-      position="static" // Back to static to be part of the layout flow
+      position="static"
       elevation={0}
       sx={{
-        // A subtle glassmorphism effect that aligns with the Paper below
-        backgroundColor: "rgba(255, 255, 255, 0.6)", 
-        backdropFilter: "blur(10px)",
+        backgroundColor: "rgba(255, 255, 255, 0.8)", 
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         color: "text.primary",
-        // A very subtle border to create separation
         borderBottom: "1px solid", 
-        borderColor: "rgba(0, 0, 0, 0.08)",
+        borderColor: "rgba(103, 80, 164, 0.1)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        "&:hover": {
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+        },
       }}
     >
       <Toolbar sx={{ justifyContent: "space-between", px: { xs: 1, sm: 2 } }}>

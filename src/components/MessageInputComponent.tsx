@@ -17,7 +17,7 @@ export function MessageInputComponent({
   onInputChange,
   onSubmit,
   isLoading,
-  language,
+  language = "Cantonese",
 }: MessageInputComponentProps) {
   const [isFocused, setIsFocused] = useState(false);
 

@@ -27,6 +27,7 @@ Task: You need to remember what the clients said individually according to brows
 Task: No data leakage of other clients
 Task: use the .txt file under data folder as domain knowledge needed for the llm
 Task: You must use Agentic RAG to keep track of knowledge and conversation, remember to prevent data leakage between clients
+The conversation data should stored in frontend, which is the client browser, since it is a serverless application
 
 Please try to follow Material Design 3 by Google
 The UI should be like mental health professional

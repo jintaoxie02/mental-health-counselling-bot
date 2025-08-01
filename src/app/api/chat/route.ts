@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         },
       },
       temperature: 0.7,
-      maxTokens: undefined,
+      maxTokens: 131072,
       modelKwargs: {
         "reasoning_enabled": true
       }
@@ -317,7 +317,13 @@ ${language === "Cantonese" ? `
               accumulatedResponse += typeof chunk.content === 'string' ? chunk.content : '';
             }
 
-            const filteredResponse = accumulatedResponse.replace(/◁think▷[\s\S]*?◁\/think▷/g, "").trim();
+            // Enhanced thinking mode filtering - remove all possible thinking tags
+            const filteredResponse = accumulatedResponse
+              .replace(/◁think▷[\s\S]*?◁\/think▷/g, "")
+              .replace(/<think>[\s\S]*?<\/think>/g, "")
+              .replace(/\[thinking\][\s\S]*?\[\/thinking\]/g, "")
+              .replace(/\*thinking\*[\s\S]*?\*\/thinking\*/g, "")
+              .trim();
 
             if (filteredResponse) {
                 // Store assistant response in client session

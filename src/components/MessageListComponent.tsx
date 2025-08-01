@@ -35,11 +35,12 @@ export function MessageListComponent({ messages, isLoading }: MessageListCompone
           display: 'flex',
           flexDirection: 'column',
           gap: 1.5,
-          // WhatsApp-style chat background
-          background: 'linear-gradient(to bottom, #E3F2FD 0%, #F3E5F5 100%)',
+          // Enhanced professional chat background
+          background: 'linear-gradient(to bottom, rgba(254, 247, 255, 0.4) 0%, rgba(232, 222, 248, 0.3) 100%)',
           backgroundImage: `
-            radial-gradient(circle at 25% 25%, rgba(103, 80, 164, 0.05) 0%, transparent 50%),
-            radial-gradient(circle at 75% 75%, rgba(74, 156, 71, 0.05) 0%, transparent 50%)
+            radial-gradient(circle at 20% 30%, rgba(103, 80, 164, 0.03) 0%, transparent 40%),
+            radial-gradient(circle at 80% 70%, rgba(74, 156, 71, 0.02) 0%, transparent 40%),
+            radial-gradient(circle at 40% 60%, rgba(208, 188, 255, 0.02) 0%, transparent 30%)
           `,
           '&::-webkit-scrollbar': {
             width: '4px',

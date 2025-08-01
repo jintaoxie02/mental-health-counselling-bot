@@ -85,7 +85,7 @@ export default function Home() {
           py: 4,
         }}
       >
-        {/* Enhanced Background Animation */}
+                  {/* Enhanced Professional Background Animation */}
         <Box
           sx={{
             position: "absolute",
@@ -102,46 +102,88 @@ export default function Home() {
               left: "-20%",
               width: "140%",
               height: "140%",
-              background: "radial-gradient(circle, rgba(103, 80, 164, 0.08) 0%, rgba(74, 156, 71, 0.04) 50%, transparent 100%)",
-              animation: "float 25s ease-in-out infinite",
+              background: "radial-gradient(circle at 30% 40%, rgba(103, 80, 164, 0.06) 0%, rgba(74, 156, 71, 0.03) 50%, transparent 70%)",
+              animation: "smoothFloat 30s ease-in-out infinite",
             },
             "&::after": {
               content: '""',
               position: "absolute",
-              top: "60%",
-              left: "80%",
-              width: "150px",
-              height: "150px",
-              background: "radial-gradient(circle, rgba(208, 188, 255, 0.1) 0%, transparent 70%)",
+              top: "10%",
+              right: "15%",
+              width: "200px",
+              height: "200px",
+              background: "radial-gradient(circle, rgba(103, 80, 164, 0.04) 0%, rgba(208, 188, 255, 0.02) 40%, transparent 70%)",
               borderRadius: "50%",
-              animation: "pulse 10s ease-in-out infinite",
+              animation: "gentlePulse 15s ease-in-out infinite",
             },
-            "@keyframes float": {
+            // Add floating particles effect
+            "& .floating-particle": {
+              position: "absolute",
+              width: "4px",
+              height: "4px",
+              backgroundColor: "rgba(103, 80, 164, 0.1)",
+              borderRadius: "50%",
+              animation: "floatUp 20s linear infinite",
+            },
+            "@keyframes smoothFloat": {
               "0%, 100%": {
-                transform: "translate(0, 0) rotate(0deg)",
+                transform: "translate(0, 0) rotate(0deg) scale(1)",
               },
               "25%": {
-                transform: "translate(-3px, -3px) rotate(90deg)",
+                transform: "translate(-10px, -5px) rotate(2deg) scale(1.02)",
               },
               "50%": {
-                transform: "translate(3px, -1px) rotate(180deg)",
+                transform: "translate(5px, -10px) rotate(-1deg) scale(0.98)",
               },
               "75%": {
-                transform: "translate(-1px, 3px) rotate(270deg)",
+                transform: "translate(-5px, 5px) rotate(1deg) scale(1.01)",
               },
             },
-            "@keyframes pulse": {
+            "@keyframes gentlePulse": {
               "0%, 100%": {
-                opacity: 0.3,
+                opacity: 0.15,
                 transform: "scale(1)",
               },
-              "50%": {
-                opacity: 0.6,
-                transform: "scale(1.1)",
+              "33%": {
+                opacity: 0.25,
+                transform: "scale(1.05)",
+              },
+              "66%": {
+                opacity: 0.2,
+                transform: "scale(0.95)",
+              },
+            },
+            "@keyframes floatUp": {
+              "0%": {
+                opacity: 0,
+                transform: "translateY(100vh) translateX(0px)",
+              },
+              "10%": {
+                opacity: 0.3,
+              },
+              "90%": {
+                opacity: 0.3,
+              },
+              "100%": {
+                opacity: 0,
+                transform: "translateY(-100px) translateX(50px)",
               },
             },
           }}
-        />
+        >
+          {/* Floating particles */}
+          {[...Array(6)].map((_, i) => (
+            <Box
+              key={i}
+              className="floating-particle"
+              sx={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 20}s`,
+                animationDuration: `${15 + Math.random() * 10}s`,
+              }}
+            />
+          ))}
+        </Box>
 
         <Container maxWidth="lg" sx={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", zIndex: 1, py: 2 }}>
           {/* Hero Section */}

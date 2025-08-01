@@ -290,6 +290,7 @@ export function Chat({ initialLanguage = "Cantonese" }: { initialLanguage?: stri
               onInputChange={(e) => setInput(e.target.value)}
               onSubmit={handleSubmit}
               isLoading={isLoading}
+              language={language}
             />
           </Paper>
         </Container>
