@@ -11,7 +11,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import LanguageIcon from '@mui/icons-material/Language';
-import { HeaderAd } from "@/components/AdSenseAd";
+
 
 export default function Home() {
   const router = useRouter();
@@ -187,9 +187,6 @@ export default function Home() {
         </Box>
 
         <Container maxWidth="lg" sx={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", zIndex: 1, py: 2 }}>
-          {/* AdSense Header Ad */}
-          <HeaderAd />
-          
           {/* Hero Section */}
           <Fade in={mounted} timeout={1000}>
             <Box sx={{ mb: 4 }}>

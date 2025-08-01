@@ -104,3 +104,4 @@ Copy and paste the AdSense code in between the <head></head> tags of your site
 Place this code on every page across your site and Google will automatically show ads in all the best places for you
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5047747164751937"
      crossorigin="anonymous"></script>
+It is auto ads by Google, so the ads position and the number of ads are determined by Google
