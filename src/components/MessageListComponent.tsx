@@ -66,7 +66,7 @@ export function MessageListComponent({ messages, isLoading }: MessageListCompone
             opacity: 0.6,
           }}
         >
-          <PsychologyIcon sx={{ fontSize: 48, color: 'primary.light', mb: 2 }} />
+
           <Typography variant="h6" color="text.secondary">
             Start Your Conversation
           </Typography>
@@ -78,20 +78,14 @@ export function MessageListComponent({ messages, isLoading }: MessageListCompone
       
       {messages.map((message: Message) => (
         <Fade in={true} timeout={500} key={message.id}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: message.role === "user" ? "flex-end" : "flex-start",
-              alignItems: 'flex-start',
-              gap: 1.5,
-            }}
-          >
-            {message.role === 'assistant' && (
-                <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.main' }}>
-                    <PsychologyIcon />
-                </Avatar>
-            )}
-
+                      <Box
+              sx={{
+                display: "flex",
+                justifyContent: message.role === "user" ? "flex-end" : "flex-start",
+                alignItems: 'flex-start',
+                gap: 1.5,
+              }}
+            >
             <Box
               sx={{
                 maxWidth: "75%",
@@ -169,9 +163,7 @@ export function MessageListComponent({ messages, isLoading }: MessageListCompone
               gap: 1.5,
             }}
           >
-            <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.main' }}>
-              <PsychologyIcon />
-            </Avatar>
+            
             <Box
               sx={{
                 maxWidth: "80%",
