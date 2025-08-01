@@ -97,3 +97,5 @@ LANGUAGE ADAPTATION GUIDELINES:
 
 Please put emphasis on the client selected language when giving response
 Allow scrolling in the chatbox
+
+Please limit the words that the user can input each time, to prevent out of context window

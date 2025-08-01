@@ -220,6 +220,17 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "Messages are required" }, { status: 400 });
         }
       }
+
+      // Context window protection: Validate input length
+      const MAX_MESSAGE_LENGTH = 8000; // ~2000 tokens
+      if (messages && messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage && lastMessage.content && lastMessage.content.length > MAX_MESSAGE_LENGTH) {
+          return NextResponse.json({ 
+            error: "Message too long. Please shorten your message to continue the conversation effectively." 
+          }, { status: 400 });
+        }
+      }
   
       await ragManager.initialize();
       

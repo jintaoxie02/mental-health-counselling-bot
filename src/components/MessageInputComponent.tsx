@@ -20,6 +20,10 @@ export function MessageInputComponent({
   language = "Cantonese",
 }: MessageInputComponentProps) {
   const [isFocused, setIsFocused] = useState(false);
+  
+  // Context window protection: ~2000 tokens = ~8000 characters max per message
+  const MAX_INPUT_LENGTH = 8000;
+  const isOverLimit = input.length > MAX_INPUT_LENGTH;
 
   const getPlaceholder = () => {
     switch (language) {
@@ -27,6 +31,28 @@ export function MessageInputComponent({
       case "Mandarin": return "分享你的想法和感受... 🤗";
       case "English": return "Share your thoughts and feelings... 🤗";
       default: return "Share your thoughts and feelings... 🤗";
+    }
+  };
+
+  const getLimitMessage = () => {
+    const remaining = MAX_INPUT_LENGTH - input.length;
+    switch (language) {
+      case "Cantonese": 
+        return remaining < 0 
+          ? `超出字數限制 ${Math.abs(remaining)} 個字符 😅` 
+          : `仲可以輸入 ${remaining} 個字符`;
+      case "Mandarin": 
+        return remaining < 0 
+          ? `超出字数限制 ${Math.abs(remaining)} 个字符 😅` 
+          : `还可以输入 ${remaining} 个字符`;
+      case "English": 
+        return remaining < 0 
+          ? `Over limit by ${Math.abs(remaining)} characters 😅` 
+          : `${remaining} characters remaining`;
+      default: 
+        return remaining < 0 
+          ? `Over limit by ${Math.abs(remaining)} characters 😅` 
+          : `${remaining} characters remaining`;
     }
   };
 
@@ -49,10 +75,10 @@ export function MessageInputComponent({
             borderRadius: '25px',
             transition: 'all 0.3s ease',
             border: '1px solid',
-            borderColor: isFocused ? 'primary.main' : 'rgba(0,0,0,0.1)',
-            bgcolor: '#F8F9FA',
+            borderColor: isOverLimit ? 'error.main' : (isFocused ? 'primary.main' : 'rgba(0,0,0,0.1)'),
+            bgcolor: isOverLimit ? 'rgba(255, 0, 0, 0.05)' : '#F8F9FA',
             '&:hover': {
-              borderColor: 'primary.light',
+              borderColor: isOverLimit ? 'error.main' : 'primary.light',
             },
           }}
         >
@@ -78,16 +104,16 @@ export function MessageInputComponent({
         
         <IconButton
           type="submit"
-          disabled={isLoading || !input.trim()}
+          disabled={isLoading || !input.trim() || isOverLimit}
           sx={{
             width: 44,
             height: 44,
-            bgcolor: input.trim() ? 'primary.main' : 'rgba(0,0,0,0.1)',
-            color: input.trim() ? 'white' : 'rgba(0,0,0,0.4)',
+            bgcolor: input.trim() && !isOverLimit ? 'primary.main' : 'rgba(0,0,0,0.1)',
+            color: input.trim() && !isOverLimit ? 'white' : 'rgba(0,0,0,0.4)',
             transition: 'all 0.2s ease',
             '&:hover': {
-              bgcolor: input.trim() ? 'primary.dark' : 'rgba(0,0,0,0.15)',
-              transform: input.trim() ? 'scale(1.05)' : 'none',
+              bgcolor: input.trim() && !isOverLimit ? 'primary.dark' : 'rgba(0,0,0,0.15)',
+              transform: input.trim() && !isOverLimit ? 'scale(1.05)' : 'none',
             },
             '&:disabled': {
               bgcolor: 'rgba(0,0,0,0.1)',
@@ -97,6 +123,19 @@ export function MessageInputComponent({
         >
           <SendIcon />
         </IconButton>
+      </Box>
+      
+      {/* Character count indicator */}
+      <Box sx={{ 
+        px: 2, 
+        py: 0.5, 
+        textAlign: 'right',
+        fontSize: '0.75rem',
+        color: isOverLimit ? 'error.main' : 'text.secondary',
+        opacity: input.length > MAX_INPUT_LENGTH * 0.8 ? 1 : 0.7,
+        transition: 'all 0.2s ease',
+      }}>
+        {input.length > MAX_INPUT_LENGTH * 0.8 && getLimitMessage()}
       </Box>
     </Box>
   );
