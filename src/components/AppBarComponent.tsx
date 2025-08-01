@@ -10,20 +10,24 @@ import {
   Tooltip,
   Box,
   FormControl,
+  SelectChangeEvent,
 } from "@mui/material";
-import { SelectChangeEvent } from "@mui/material/Select";
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
-// ... (interface AppBarComponentProps)
+interface AppBarComponentProps {
+  language: string;
+  onLanguageChange: (event: SelectChangeEvent) => void;
+  onReset: () => void;
+  onBack: () => void;
+}
 
 export function AppBarComponent({
   language,
   onLanguageChange,
   onReset,
-  onBackClick,
-  showBackButton,
-}: any) {
+  onBack,
+}: AppBarComponentProps) {
 
   return (
     <AppBar
@@ -41,13 +45,11 @@ export function AppBarComponent({
     >
       <Toolbar sx={{ justifyContent: "space-between", px: { xs: 1, sm: 2 } }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          {showBackButton && (
-            <Tooltip title="Back to Home">
-              <IconButton onClick={onBackClick} sx={{ color: 'primary.dark' }}>
-                <ArrowBackIcon />
-              </IconButton>
-            </Tooltip>
-          )}
+          <Tooltip title="Back to Home">
+            <IconButton onClick={onBack} sx={{ color: 'primary.dark' }}>
+              <ArrowBackIcon />
+            </IconButton>
+          </Tooltip>
           <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.dark", display: { xs: 'none', sm: 'block' } }}>
             Mental Health Support
           </Typography>

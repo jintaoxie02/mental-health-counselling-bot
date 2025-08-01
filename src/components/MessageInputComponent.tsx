@@ -23,9 +23,10 @@ export function MessageInputComponent({
 
   const getPlaceholder = () => {
     switch (language) {
-      case "Cantonese": return "分享你嘅想法...";
-      case "Mandarin": return "分享你的想法...";
-      default: return "Share your thoughts...";
+      case "Cantonese": return "分享你嘅想法同感受... 🤗";
+      case "Mandarin": return "分享你的想法和感受... 🤗";
+      case "English": return "Share your thoughts and feelings... 🤗";
+      default: return "Share your thoughts and feelings... 🤗";
     }
   };
 
@@ -33,23 +34,26 @@ export function MessageInputComponent({
     <Box
       sx={{
         flexShrink: 0,
-        p: { xs: 1.5, sm: 2 },
+        p: { xs: 1, sm: 1.5 },
         borderTop: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'transparent',
+        borderColor: 'rgba(0,0,0,0.1)',
+        bgcolor: '#FFFFFF',
+        boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
       }}
     >
       <Box component="form" onSubmit={onSubmit} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
         <Paper
-          elevation={isFocused ? 4 : 1}
+          elevation={0}
           sx={{
             flex: 1,
-            borderRadius: '20px',
+            borderRadius: '25px',
             transition: 'all 0.3s ease',
-            boxShadow: isFocused 
-              ? '0 4px 16px rgba(103, 80, 164, 0.2)'
-              : '0 1px 4px rgba(0, 0, 0, 0.06)',
-            bgcolor: 'background.default',
+            border: '1px solid',
+            borderColor: isFocused ? 'primary.main' : 'rgba(0,0,0,0.1)',
+            bgcolor: '#F8F9FA',
+            '&:hover': {
+              borderColor: 'primary.light',
+            },
           }}
         >
           <TextField
@@ -76,11 +80,19 @@ export function MessageInputComponent({
           type="submit"
           disabled={isLoading || !input.trim()}
           sx={{
-            width: 48,
-            height: 48,
-            bgcolor: 'primary.main',
-            color: 'white',
-            boxShadow: '0 4px 12px rgba(103, 80, 164, 0.3)',
+            width: 44,
+            height: 44,
+            bgcolor: input.trim() ? 'primary.main' : 'rgba(0,0,0,0.1)',
+            color: input.trim() ? 'white' : 'rgba(0,0,0,0.4)',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              bgcolor: input.trim() ? 'primary.dark' : 'rgba(0,0,0,0.15)',
+              transform: input.trim() ? 'scale(1.05)' : 'none',
+            },
+            '&:disabled': {
+              bgcolor: 'rgba(0,0,0,0.1)',
+              color: 'rgba(0,0,0,0.3)',
+            },
           }}
         >
           <SendIcon />

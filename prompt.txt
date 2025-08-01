@@ -7,6 +7,8 @@
 #The contrast of text and its padding color is important
 #Must follow Google Material Design 3
 
+#The chatting environment is like WhatsApp and Telegram, please adjust the style of reponse
+
 Programming Language: Typescript
 Framework: Next.JS
 #For any libraries, please try to use the latest version when possible
