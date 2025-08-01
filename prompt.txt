@@ -105,3 +105,6 @@ Place this code on every page across your site and Google will automatically sho
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5047747164751937"
      crossorigin="anonymous"></script>
 It is auto ads by Google, so the ads position and the number of ads are determined by Google
+
+The conversation history should be saved unless the reset button is triggered
+However, it should be saved at the frontend, it is a serverless app

@@ -28,6 +28,54 @@ export function Chat({ initialLanguage = "Cantonese" }: { initialLanguage?: stri
   const [openResetDialog, setOpenResetDialog] = useState(false);
   
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Frontend conversation persistence for serverless architecture
+  const STORAGE_KEY = 'mental-health-chat-history';
+  const STORAGE_LANGUAGE_KEY = 'mental-health-chat-language';
+
+  // Load conversation history and language from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedMessages = localStorage.getItem(STORAGE_KEY);
+      const savedLanguage = localStorage.getItem(STORAGE_LANGUAGE_KEY);
+      
+      if (savedMessages) {
+        const parsedMessages = JSON.parse(savedMessages);
+        if (Array.isArray(parsedMessages) && parsedMessages.length > 0) {
+          setMessages(parsedMessages);
+        }
+      }
+      
+      if (savedLanguage && ['Cantonese', 'Mandarin', 'English'].includes(savedLanguage)) {
+        setLanguage(savedLanguage);
+      }
+    } catch (error) {
+      console.error('Error loading conversation history:', error);
+      // Clear corrupted data
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_LANGUAGE_KEY);
+    }
+  }, []);
+
+  // Save messages to localStorage whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      } catch (error) {
+        console.error('Error saving conversation history:', error);
+      }
+    }
+  }, [messages]);
+
+  // Save language preference whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_LANGUAGE_KEY, language);
+    } catch (error) {
+      console.error('Error saving language preference:', error);
+    }
+  }, [language]);
 
   // Cleanup abort controller on unmount
   useEffect(() => {
@@ -217,7 +265,11 @@ export function Chat({ initialLanguage = "Cantonese" }: { initialLanguage?: stri
 
   const handleReset = async () => {
     try {
-      // Call DELETE endpoint to reset server-side session
+      // Clear frontend storage (primary storage for serverless app)
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_LANGUAGE_KEY);
+      
+      // Call DELETE endpoint to reset server-side session (if any)
       await fetch('/api/chat', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },

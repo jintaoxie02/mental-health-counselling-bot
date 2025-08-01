@@ -36,15 +36,17 @@ export function Sidebar({ isOpen = true, onToggle, onNewChat }: SidebarProps) {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [conversationHistory, setConversationHistory] = useState<string[]>([]);
 
-  // Load conversation history from localStorage
+  // Load conversation history from localStorage (persistent frontend storage)
   useEffect(() => {
     try {
-      const history = localStorage.getItem('chat-history-keys');
+      const history = localStorage.getItem('mental-health-chat-sessions');
       if (history) {
-        setConversationHistory(JSON.parse(history));
+        const parsedHistory = JSON.parse(history);
+        setConversationHistory(parsedHistory);
       }
     } catch (error) {
       console.error('Error loading conversation history:', error);
+      localStorage.removeItem('mental-health-chat-sessions');
     }
   }, []);
 
@@ -52,24 +54,36 @@ export function Sidebar({ isOpen = true, onToggle, onNewChat }: SidebarProps) {
     if (onNewChat) {
       onNewChat();
     }
-    // Add timestamp-based conversation key
-    const newConversationId = `chat-${Date.now()}`;
-    const updatedHistory = [newConversationId, ...conversationHistory.slice(0, 9)]; // Keep last 10
+    // Create new conversation session with timestamp
+    const newConversationId = `session-${Date.now()}`;
+    const updatedHistory = [newConversationId, ...conversationHistory.slice(0, 19)]; // Keep last 20 sessions
     setConversationHistory(updatedHistory);
-    localStorage.setItem('chat-history-keys', JSON.stringify(updatedHistory));
+    
+    try {
+      localStorage.setItem('mental-health-chat-sessions', JSON.stringify(updatedHistory));
+    } catch (error) {
+      console.error('Error saving conversation sessions:', error);
+    }
   };
 
   const formatConversationTitle = (id: string) => {
-    const timestamp = id.replace('chat-', '');
+    const timestamp = id.replace('session-', '');
     const date = new Date(parseInt(timestamp));
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
     
-    if (days === 0) {
-      return `Today ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    if (hours < 1) {
+      return `Just now`;
+    } else if (days === 0) {
+      if (hours === 1) {
+        return `1 hour ago`;
+      } else {
+        return `${hours} hours ago`;
+      }
     } else if (days === 1) {
-      return `Yesterday ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      return `Yesterday`;
     } else if (days < 7) {
       return `${days} days ago`;
     } else {
