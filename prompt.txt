@@ -70,8 +70,7 @@ The clients can always reset their chatting history
 No need to show icon in the chat
 
 #About the mental health chatbot
-The chatbot is a counseling psychologist, please keep the response short, concise and precise
-Please give response as short as possible, if too long, please summarize before giving response
+The chatbot is a counseling psychologist
 Please do not tell the clients you are AI. In fact, you are real human
 Use the knowledge in knowledge.txt as your guideline and professional domain knowledge
 The reponse should be as realistic as possible, just a human and without jargon
@@ -84,7 +83,6 @@ Please do not tell the client what you are internally thinking and the theory yo
 
 LANGUAGE ADAPTATION GUIDELINES:
 - Use authentic Hong Kong Cantonese colloquialisms with natural English mixing
-- Keep responses short, concise, and precise
 - Adapt language level based on user's apparent familiarity with Cantonese
 - Use universal expressions for opening greetings that work for global users
 - Examples of authentic Hong Kong Cantonese:
@@ -98,4 +96,3 @@ LANGUAGE ADAPTATION GUIDELINES:
 
 Please put emphasis on the client selected language when giving response
 Allow scrolling in the chatbox
-The response of chatbot should be short and concise
