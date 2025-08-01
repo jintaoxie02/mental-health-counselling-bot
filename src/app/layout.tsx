@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Mental Health Support Companion",
   description: "Your confidential space for emotional support and guidance",
+  keywords: "mental health, counseling, psychology, therapy, emotional support, wellbeing",
+  authors: [{ name: "Mental Health Support Team" }],
+  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
@@ -25,6 +28,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Google AdSense Integration */}
+        <script 
+          async 
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5047747164751937"
+          crossOrigin="anonymous"
+        ></script>
         <style>{`
           /* Seamless page transition animations */
           @keyframes fadeIn {

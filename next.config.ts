@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
   // Environment variables for client-side
   env: {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000',
+    NEXT_PUBLIC_ADSENSE_CLIENT_ID: 'ca-pub-5047747164751937',
   },
   
   // Headers for better security and performance

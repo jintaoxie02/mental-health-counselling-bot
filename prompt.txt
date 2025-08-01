@@ -99,3 +99,8 @@ Please put emphasis on the client selected language when giving response
 Allow scrolling in the chatbox
 
 Please limit the words that the user can input each time, to prevent out of context window
+
+Copy and paste the AdSense code in between the <head></head> tags of your site
+Place this code on every page across your site and Google will automatically show ads in all the best places for you
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5047747164751937"
+     crossorigin="anonymous"></script>
