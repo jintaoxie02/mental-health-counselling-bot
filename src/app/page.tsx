@@ -81,6 +81,7 @@ export default function Home() {
           bgcolor: "background.default",
           textAlign: "center",
           overflowX: "hidden",
+          overflowY: "auto",
           py: 4,
         }}
       >

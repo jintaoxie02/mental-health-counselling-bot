@@ -15,10 +15,10 @@ API: OpenRounter -> Use OPENROUTER_API_KEY, "https://api.siliconflow.cn/v1/embed
 create a .env to save the api key
 
 For embedding, use BAAI/bge-m3
-For OpenRounter Model, use moonshotai/kimi-vl-a3b-thinking:free
+For OpenRounter Model, use z-ai/glm-4.5-air:free
 The context windows is 131,072
 
-The model is a vision-language model, supporting image input
+GLM-4.5-Air is the lightweight variant of our latest flagship model family, also purpose-built for agent-centric applications. Like GLM-4.5, it adopts the Mixture-of-Experts (MoE) architecture but with a more compact parameter size. GLM-4.5-Air also supports hybrid inference modes, offering a "thinking mode" for advanced reasoning and tool use, and a "non-thinking mode" for real-time interaction. Users can control the reasoning behaviour with the reasoning enabled boolean.
 
 Task: using Agentic RAG with LangChain, and .txt in the data folder, to create a web app to do psychological counselling
 Task: You need to remember what the clients said individually according to browser identity under a serverless environment

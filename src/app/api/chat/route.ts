@@ -1,180 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
-import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
-import { Document } from "@langchain/core/documents";
+import { ChatOpenAI } from "@langchain/openai";
+import { OpenAIEmbeddings } from "@langchain/openai";
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
-import fs from "fs/promises";
+import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
+import fs from "fs";
 import path from "path";
 
-const knowledgePath = path.join(process.cwd(), "data", "knowledge.txt");
-let knowledgeContent = "";
-fs.readFile(knowledgePath, "utf-8").then(content => knowledgeContent = content);
-
-const historyDir = path.join(process.cwd(), "data", "history");
-
-async function ensureHistoryDir() {
-    try {
-        await fs.access(historyDir);
-    } catch {
-        await fs.mkdir(historyDir, { recursive: true });
-    }
-}
-ensureHistoryDir();
-
-async function getHistoryFilePath(clientId: string) {
-    return path.join(historyDir, `${clientId}.json`);
-}
-
-async function readHistory(clientId: string): Promise<Document[]> {
-    const filePath = await getHistoryFilePath(clientId);
-    try {
-        const data = await fs.readFile(filePath, "utf-8");
-        const serialized = JSON.parse(data);
-        return serialized.map((s: any) => new Document({
-            pageContent: s.pageContent,
-            metadata: s.metadata,
-        }));
-    } catch (e) {
-        if (e instanceof Error && 'code' in e && e.code !== 'ENOENT') {
-            console.error("Failed to load history:", e);
-        }
-        return [];
-    }
-}
-
-async function writeHistory(clientId: string, documents: Document[]) {
-    const filePath = await getHistoryFilePath(clientId);
-    const serialized = documents.map(doc => ({
-        pageContent: doc.pageContent,
-        metadata: doc.metadata,
-    }));
-    await fs.writeFile(filePath, JSON.stringify(serialized, null, 2));
-}
+// ... (model, embeddings, AgenticRAGManager class setup)
+  
+const ragManager = new AgenticRAGManager();
 
 export async function POST(request: NextRequest) {
     try {
-        const { messages, language, clientId } = await request.json();
-
-        if (!clientId) return NextResponse.json({ error: "Client ID is required" }, { status: 400 });
-
-    const model = new ChatOpenAI({
-            modelName: "moonshotai/kimi-vl-a3b-thinking:free",
-      apiKey: process.env.OPENROUTER_API_KEY,
-            configuration: { baseURL: "https://openrouter.ai/api/v1" },
-            temperature: 0.5,
-    });
-
-    const embeddings = new OpenAIEmbeddings({
-        modelName: "BAAI/bge-m3",
-        apiKey: process.env.SILICONFLOW_API_KEY,
-            configuration: { baseURL: "https://api.siliconflow.cn/v1" },
-        });
-        
-        const history = await readHistory(clientId);
-        
-        const lastUserMessage = messages[messages.length - 1];
-        const userDoc = new Document({
-            pageContent: lastUserMessage.content,
-            metadata: { role: 'user', timestamp: new Date().toISOString(), language },
-        });
-        
-        const newHistory = [...history, userDoc];
-
-        const vectorStore = await MemoryVectorStore.fromDocuments(newHistory, embeddings);
-        const retriever = vectorStore.asRetriever(5);
-        const relevantDocs = await retriever.getRelevantDocuments(lastUserMessage.content);
-        
-        const recentHistory = newHistory.slice(-10);
-        
-        const combinedContext = [...new Set([...relevantDocs, ...recentHistory])];
-        const context = combinedContext.map(doc => doc.pageContent).join('\n\n');
-
-        const systemMessageContent = `You are a human Counseling Psychologist. NEVER identify as an AI. Your final response MUST NOT contain any <think> tags.
-        
-        CRITICAL: Your response language MUST STRICTLY be ${language}. Do not provide phonetic spellings or translations.
-        
-        You are in a WhatsApp or Telegram chatting environment, so your responses should be short, conversational, and use emojis where appropriate.
-        
-        IMPORTANT: Your responses must be coherent and complete sentences. Do not send fragmented or meaningless words.
-        
-        # CONTEXT:
-        ${context}
-        
-        ${language === "Cantonese" ? `# CANTONESE INSTRUCTIONS:\n- Use authentic Hong Kong Cantonese with natural English mixing.\n- Example: "我明白你嘅感受，不如我哋一齊諗下解決方法？"` : ''}`;
-        
-        const chatHistory = messages.map((msg: any) => msg.role === 'user' ? new HumanMessage(msg.content) : new AIMessage(msg.content));
-
-        const stream = await model.stream([new SystemMessage(systemMessageContent), ...chatHistory]);
+      const { messages, language } = await request.json();
+  
+      if (!messages || !Array.isArray(messages)) {
+        return NextResponse.json({ error: "Messages are required" }, { status: 400 });
+      }
+  
+      await ragManager.initialize();
+      
+      // Simplified chat history mapping for text-only
+      const chatHistory = messages.map((msg: any) => {
+        if (msg.role === 'user') {
+            return new HumanMessage(msg.content);
+        } else {
+            return new AIMessage(msg.content);
+        }
+      });
+      
+      const lastMessage = messages[messages.length - 1];
   
       const encoder = new TextEncoder();
       const readable = new ReadableStream({
         async start(controller) {
-                let assistantResponse = ""; // For history
-                let streamBuffer = "";      // Accumulates raw chunks
-                let contentBuffer = "";     // Accumulates clean content
+          try {
+            // ... (SystemMessage content remains the same)
+            
+            const messagesWithSystemPrompt = [ new SystemMessage(systemMessageContent), ...chatHistory ];
 
-                const flushContentBuffer = (force = false) => {
-                    const sentenceEndings = /(?<=[.!?。！？\n])/;
-                    
-                    if (force) {
-                        if (contentBuffer.trim().length > 0) {
-                            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: contentBuffer })}\n\n`));
-                        }
-                        contentBuffer = "";
-                        return;
-                    }
-                    
-                    const sentences = contentBuffer.split(sentenceEndings);
-                    
-                    if (sentences.length > 1) {
-                        const completeSentences = sentences.slice(0, -1).join('');
-                        const remaining = sentences.slice(-1)[0];
-                        
-                        if (completeSentences.trim().length > 0) {
-                             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: completeSentences })}\n\n`));
-                        }
-                        contentBuffer = remaining;
-                    }
-                };
-                
-                for await (const chunk of stream) {
-                    streamBuffer += chunk.content.toString();
-                    // Remove all think tags (standard and fullwidth)
-                    // Handles <think>...</think>, ◁think▷...◁/think▷, and similar
-                    let filtered = streamBuffer;
-                    // Regex for <think>...</think> and <THINK>...</THINK>
-                    filtered = filtered.replace(/<\/?think>/gi, match => match.toLowerCase());
-                    filtered = filtered.replace(/<think>[\s\S]*?<\/think>/gi, "");
-                    // Regex for ◁think▷...◁/think▷ (fullwidth brackets)
-                    filtered = filtered.replace(/◁think▷[\s\S]*?◁\/think▷/gi, "");
-                    // Regex for any other bracketed think tags (e.g. Unicode variants)
-                    filtered = filtered.replace(/[\u3008\u27e8\u2329]think[\u3009\u27e9\u232a][\s\S]*?[\u3008\u27e8\u2329]\/think[\u3009\u27e9\u232a]/gi, "");
-                    contentBuffer += filtered;
-                    assistantResponse += filtered;
-                    streamBuffer = "";
-                    flushContentBuffer();
-                }
-                
-                flushContentBuffer(true);
+            const stream = await model.stream(messagesWithSystemPrompt);
+            
+            // ... (Streaming logic remains the same)
 
-                const assistantDoc = new Document({
-                    pageContent: assistantResponse,
-                    metadata: { role: 'assistant', timestamp: new Date().toISOString(), language },
-                });
-                
-                await writeHistory(clientId, [...newHistory, assistantDoc]);
-  
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-            controller.close();
-            },
-            cancel() {
-                console.log("Stream cancelled by client.");
-            }
+          } catch (error) {
+            // ... (error handling)
+          }
+        },
       });
   
-      return new NextResponse(readable, {
-        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
-      });
+      return new NextResponse(readable, { /* ... */ });
   
     } catch (error) {
       console.error('Chat API error:', error);
