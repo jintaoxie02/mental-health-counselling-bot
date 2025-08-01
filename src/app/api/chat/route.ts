@@ -56,7 +56,13 @@ export async function POST(request: NextRequest) {
         },
       },
       temperature: 0.7,
-      maxTokens: 4096,
+      // Context Window Strategy: 131,072 total tokens
+      // - Full knowledge base: ~120,000 tokens (comprehensive counseling knowledge)
+      // - Conversation history: ~8,000 tokens (15 recent exchanges)
+      // - System prompt: ~1,000 tokens
+      // - Response output: 2,048 tokens (adequate for counseling responses)
+      // Total: ~131,048 tokens (optimal utilization)
+      maxTokens: 2048,
       modelKwargs: {
         "reasoning_enabled": true
       }
@@ -111,14 +117,14 @@ export async function POST(request: NextRequest) {
             },
           ]);
           
-          // Add client's conversation history to vector store for context (reduced for efficiency)
+          // Add client's conversation history to vector store for comprehensive context
           if (session.conversations.length > 0) {
             const conversationText = session.conversations
-              .slice(-10) // Last 10 messages to save context
+              .slice(-15) // Last 15 messages for better continuity
               .map((conv) => {
                 const content = conv.message.content.toString();
-                const truncatedContent = content.length > 150 ? content.substring(0, 150) + "..." : content;
-                return `${conv.message instanceof HumanMessage ? 'User' : 'Assistant'}: ${truncatedContent}`;
+                // Keep full content for comprehensive understanding
+                return `${conv.message instanceof HumanMessage ? 'User' : 'Assistant'}: ${content}`;
               })
               .join('\n');
             
@@ -156,13 +162,9 @@ export async function POST(request: NextRequest) {
               .map(doc => doc.pageContent).join('\n\n');
             const conversationContext = this.analyzeConversationHistory(conversationHistory);
             
-            // Limit context to prevent overflow
-            const limitedKnowledgeContext = knowledgeContext.length > 6000 
-              ? knowledgeContext.substring(0, 6000) + "\n\n[Knowledge truncated]"
-              : knowledgeContext;
-            
+            // Use full knowledge context for comprehensive counseling
             return {
-              knowledgeContext: limitedKnowledgeContext,
+              knowledgeContext,
               conversationContext,
               relevantSkills: this.extractRelevantSkills(relevantDocs, userMessage)
             };
@@ -170,14 +172,13 @@ export async function POST(request: NextRequest) {
         
         private analyzeConversationHistory(history: (HumanMessage | AIMessage)[]) {
             if (history.length === 0) return "";
-            // Reduce to last 10 exchanges to save context
-            const recentExchanges = history.slice(-10);
+            // Use last 15 exchanges for better context continuity
+            const recentExchanges = history.slice(-15);
             return recentExchanges.map(msg => {
                 const prefix = msg instanceof HumanMessage ? 'User' : 'Assistant';
                 const content = typeof msg.content === 'string' ? msg.content : (msg.content as any[]).find(c => c.type === 'text')?.text || '';
-                // Limit individual message length
-                const truncatedContent = content.length > 200 ? content.substring(0, 200) + "..." : content;
-                return `${prefix}: ${truncatedContent}`;
+                // Keep full message content for comprehensive understanding
+                return `${prefix}: ${content}`;
             }).join('\n');
         }
         
@@ -236,10 +237,8 @@ export async function POST(request: NextRequest) {
           try {
             const context = await ragManager.getRelevantContext(lastMessage?.content || "", chatHistory);
             
-            // Truncate knowledge content to prevent context overflow
-            const truncatedKnowledgeContent = knowledgeContent.length > 8000 
-              ? knowledgeContent.substring(0, 8000) + "\n\n[Content truncated for context efficiency]"
-              : knowledgeContent;
+            // Use full knowledge base for maximum counseling effectiveness
+            const fullKnowledgeContent = knowledgeContent;
             
             const systemMessageContent = isInitialGreeting ? `
 # DYNAMIC OPENING GREETING GENERATION
@@ -291,9 +290,9 @@ Generate ONLY the opening greeting - nothing else.
 - Use emojis naturally like in messaging apps (😊, 💙, 🤗, 🌟, etc.)
 - Write like you're texting a friend who needs support - warm, empathetic, but professional
 
-# CORE KNOWLEDGE BASE:
+# FULL KNOWLEDGE BASE:
 ---
-${truncatedKnowledgeContent}
+${fullKnowledgeContent}
 ---
 # END OF KNOWLEDGE BASE
 
