@@ -122,8 +122,8 @@ export async function POST(request: NextRequest) {
         async getRelevantContext(userMessage: string, conversationHistory: (HumanMessage | AIMessage)[]) {
             // Store current conversation in client session
             const session = clientSessions.get(this.clientId);
-            if (session) {
-              // Add new user message to session
+            if (session && conversationHistory.length > 0) {
+              // Add new user message to session only if there is a message
               session.conversations.push({
                 timestamp: Date.now(),
                 message: conversationHistory[conversationHistory.length - 1]
