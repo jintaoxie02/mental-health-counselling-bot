@@ -108,3 +108,6 @@ It is auto ads by Google, so the ads position and the number of ads are determin
 
 The conversation history should be saved unless the reset button is triggered
 However, it should be saved at the frontend, it is a serverless app
+
+Add donate button on every page of the app -> https://ko-fi.com/helloworld1024
+However, make sure it follow Google Material Design 3
